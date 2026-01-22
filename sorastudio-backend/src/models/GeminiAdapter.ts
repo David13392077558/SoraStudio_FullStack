@@ -33,19 +33,14 @@ export class GeminiAdapter implements AIModelAdapter {
     try {
       let prompt = `请根据以下要求生成高质量的Sora视频提示词：\n\n`;
 
-      if (request.style) {
-        prompt += `风格：${request.style}\n`;
-      }
-
-      if (request.description) {
-        prompt += `描述：${request.description}\n`;
-      }
+      if (request.style) prompt += `风格：${request.style}\n`;
+      if (request.description) prompt += `描述：${request.description}\n`;
 
       prompt += `\n请生成结构化的提示词，包含镜头语言、构图、光影等专业参数。`;
 
       let result;
+
       if (request.imagePath && fs.existsSync(request.imagePath)) {
-        // 处理图片输入
         const imageData = fs.readFileSync(request.imagePath);
         const imagePart = {
           inlineData: {
@@ -54,14 +49,9 @@ export class GeminiAdapter implements AIModelAdapter {
           },
         };
 
-        const fullPrompt = [
-          { text: prompt },
-          imagePart,
-        ];
-
+        const fullPrompt = [{ text: prompt }, imagePart];
         result = await this.model.generateContent(fullPrompt);
       } else {
-        // 纯文本输入
         result = await this.model.generateContent(prompt);
       }
 
@@ -91,7 +81,6 @@ export class GeminiAdapter implements AIModelAdapter {
       prompt += `请生成包含开场白、卖点介绍、用户见证、促销活动的完整带货脚本。`;
 
       if (request.productImagePath && fs.existsSync(request.productImagePath)) {
-        // 处理产品图片
         const imageData = fs.readFileSync(request.productImagePath);
         const imagePart = {
           inlineData: {
@@ -100,10 +89,7 @@ export class GeminiAdapter implements AIModelAdapter {
           },
         };
 
-        const fullPrompt = [
-          { text: prompt },
-          imagePart,
-        ];
+        const fullPrompt = [{ text: prompt }, imagePart];
 
         const result = await this.model.generateContent(fullPrompt);
         const response = await result.response;
@@ -141,14 +127,12 @@ export class GeminiAdapter implements AIModelAdapter {
 
   async analyzeVideo(request: AnalyzeVideoRequest): Promise<AnalyzeVideoResponse> {
     try {
-      // 对于视频分析，我们需要先提取关键帧
       const framePaths = await this.extractVideoFrames(request.videoPath);
 
       if (framePaths.length === 0) {
         throw new Error('无法提取视频帧');
       }
 
-      // 使用第一帧和中间帧进行分析
       const analysisPrompt = `请分析这个视频的风格特征，包括：
 1. 视觉风格（色彩、构图、光影）
 2. 镜头语言（运动、角度、景别）
@@ -168,16 +152,12 @@ export class GeminiAdapter implements AIModelAdapter {
         },
       }));
 
-      const fullPrompt = [
-        { text: analysisPrompt },
-        ...imageParts,
-      ];
+      const fullPrompt = [{ text: analysisPrompt }, ...imageParts];
 
       const result = await this.model.generateContent(fullPrompt);
       const response = await result.response;
       const analysis = response.text();
 
-      // 解析分析结果
       const parsedResult = this.parseVideoAnalysis(analysis);
 
       return {
@@ -214,28 +194,19 @@ export class GeminiAdapter implements AIModelAdapter {
   }
 
   private async extractVideoFrames(videoPath: string): Promise<string[]> {
-    // 这里应该使用ffmpeg提取帧，暂时返回空数组
-    // 实际实现需要集成ffmpeg
+    // TODO: 使用 ffmpeg 提取帧
     return [];
   }
 
   private extractHighlights(script: string): string {
-    // 简单的卖点提取逻辑
     const highlights = script.match(/特点|优势|卖点|功能|效果/gi) || [];
     return highlights.slice(0, 5).join('、');
   }
 
   private parseVideoAnalysis(analysis: string): Omit<AnalyzeVideoResponse, 'metadata'> {
-    // 简单的解析逻辑，实际应该更智能
     return {
       styleTags: ['电影级', '专业光影', '动态构图'],
       similarPrompt: '电影级镜头，专业电影制作，4K分辨率，电影光影，景深效果',
-      cameraAnalysis: '使用跟拍和摇臂镜头，营造专业电影感',
-      storyboard: '0-5s: 建立镜头\n5-10s: 跟拍运动\n10-15s: 特写细节',
-    };
-  }
-}
-
       cameraAnalysis: '使用跟拍和摇臂镜头，营造专业电影感',
       storyboard: '0-5s: 建立镜头\n5-10s: 跟拍运动\n10-15s: 特写细节',
     };
