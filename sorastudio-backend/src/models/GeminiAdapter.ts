@@ -1,5 +1,14 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { AIModelAdapter, AIModelConfig, GeneratePromptRequest, GeneratePromptResponse, GenerateScriptRequest, GenerateScriptResponse, AnalyzeVideoRequest, AnalyzeVideoResponse } from './types';
+import {
+  AIModelAdapter,
+  AIModelConfig,
+  GeneratePromptRequest,
+  GeneratePromptResponse,
+  GenerateScriptRequest,
+  GenerateScriptResponse,
+  AnalyzeVideoRequest,
+  AnalyzeVideoResponse
+} from './types';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -68,9 +77,9 @@ export class GeminiAdapter implements AIModelAdapter {
           tokens_used: response.usageMetadata?.totalTokenCount || 0,
         },
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Gemini generatePrompt error:', error);
-      throw new Error(`Gemini API调用失败: ${error.message}`);
+      throw new Error(`Gemini API调用失败: ${error?.message || '未知错误'}`);
     }
   }
 
@@ -124,9 +133,9 @@ export class GeminiAdapter implements AIModelAdapter {
           },
         };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Gemini generateScript error:', error);
-      throw new Error(`Gemini API调用失败: ${error.message}`);
+      throw new Error(`Gemini API调用失败: ${error?.message || '未知错误'}`);
     }
   }
 
@@ -178,9 +187,9 @@ export class GeminiAdapter implements AIModelAdapter {
           frames_analyzed: framePaths.length,
         },
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Gemini analyzeVideo error:', error);
-      throw new Error(`Gemini API调用失败: ${error.message}`);
+      throw new Error(`Gemini API调用失败: ${error?.message || '未知错误'}`);
     }
   }
 
@@ -221,6 +230,12 @@ export class GeminiAdapter implements AIModelAdapter {
     return {
       styleTags: ['电影级', '专业光影', '动态构图'],
       similarPrompt: '电影级镜头，专业电影制作，4K分辨率，电影光影，景深效果',
+      cameraAnalysis: '使用跟拍和摇臂镜头，营造专业电影感',
+      storyboard: '0-5s: 建立镜头\n5-10s: 跟拍运动\n10-15s: 特写细节',
+    };
+  }
+}
+
       cameraAnalysis: '使用跟拍和摇臂镜头，营造专业电影感',
       storyboard: '0-5s: 建立镜头\n5-10s: 跟拍运动\n10-15s: 特写细节',
     };
