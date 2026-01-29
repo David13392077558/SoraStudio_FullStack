@@ -9,20 +9,36 @@ import { getTaskStatusHandler } from './handlers/getTaskStatus';
 import { registerHandler, loginHandler, getProfileHandler, updateProfileHandler, createProjectHandler, getUserProjectsHandler, updateProjectHandler, deleteProjectHandler, changePasswordHandler } from './handlers/auth';
 import { upload, handleMulterError } from './middleware/upload';
 import { authenticateToken, optionalAuth } from './middleware/auth';
+import { initializeRedisConfig } from './utils/redisConfig';
+import { diagnosticHandler, startPeriodicCleanup } from './utils/diagnostics';
+import { fileBuffers } from './middleware/upload';
 
 dotenv.config();
 const app = express();
 
 // 中间件
-app.use(cors());
-app.use(express.json());
+app.use(cors({
+  origin: [process.env.VITE_BACKEND_URL || '*', 'http://localhost:5173', 'http://localhost:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb' }));
 
-// 任务队列
+// 初始化 Redis 配置
+initializeRedisConfig().catch(console.error);
+
+// 任务队列配置
+const redisConfig = {
+  host: process.env.REDIS_HOST || 'localhost',
+  port: parseInt(process.env.REDIS_PORT || '6379'),
+  password: process.env.REDIS_PASSWORD,
+  tls: process.env.REDIS_TLS === 'true' ? {} : undefined,
+};
+
 export const taskQueue = new Queue('video-tasks', {
-  connection: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-  },
+  connection: redisConfig as any,
 });
 
 // 认证路由（公开）
@@ -59,37 +75,62 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
+    redis: {
+      host: process.env.REDIS_HOST || 'localhost',
+      port: process.env.REDIS_PORT || '6379',
+    }
   });
+});
+
+// 诊断路由 (仅开发/调试)
+app.get('/api/diagnostics', (req, res) => {
+  // 可选：添加认证检查
+  // if (!req.query.token || req.query.token !== process.env.DIAGNOSTIC_TOKEN) {
+  //   return res.status(401).json({ error: '未授权' });
+  // }
+  diagnosticHandler(req, res);
 });
 
 // 全局错误处理
 app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Unhandled error:', error);
-  res.status(500).json({
+  console.error('❌ 未处理的错误:', {
+    message: error.message,
+    stack: error.stack,
+    path: req.path,
+    method: req.method,
+  });
+  
+  res.status(error.status || 500).json({
     error: '服务器内部错误',
-    message: process.env.NODE_ENV === 'development' ? error.message : '请稍后重试'
+    message: process.env.NODE_ENV === 'development' ? error.message : '请稍后重试',
+    path: req.path,
   });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`后端服务运行在端口 ${PORT}`);
-  console.log('支持的 API:');
-  console.log('认证相关:');
-  console.log('- POST /api/auth/register');
-  console.log('- POST /api/auth/login');
-  console.log('- GET /api/auth/profile');
-  console.log('- PUT /api/auth/profile');
-  console.log('项目管理:');
-  console.log('- POST /api/projects');
-  console.log('- GET /api/projects');
-  console.log('- PUT /api/projects/:projectId');
-  console.log('- DELETE /api/projects/:projectId');
-  console.log('AI功能:');
-  console.log('- POST /api/ai/generate-prompt (文件大小限制: 图片10MB, 视频500MB)');
-  console.log('- POST /api/ai/generate-script (文件大小限制: 图片10MB)');
-  console.log('- POST /api/ai/analyze-video (文件大小限制: 视频500MB)');
-  console.log('- GET /api/tasks/:taskId');
-  console.log('- GET /health');
+const PORT = parseInt(process.env.PORT || '3000', 10);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n✅ 后端服务运行在端口 ${PORT}`);
+  console.log(`📍 API 基础 URL: http://0.0.0.0:${PORT}`);
+  console.log(`🔄 Redis 配置: ${redisConfig.host}:${redisConfig.port}`);
+  console.log(`🌍 CORS 允许源: ${process.env.VITE_BACKEND_URL || 'localhost'}`);
+  console.log(`📊 诊断接口: GET http://localhost:${PORT}/api/diagnostics`);
+  
+  // 启动定期清理任务
+  startPeriodicCleanup(600000); // 10分钟清理一次
+  
+  // 监控内存使用
+  setInterval(() => {
+    const memory = process.memoryUsage();
+    console.log(`📊 内存: ${(memory.heapUsed / 1024 / 1024).toFixed(2)}MB / ${(memory.heapTotal / 1024 / 1024).toFixed(2)}MB (文件缓冲数: ${fileBuffers.size})`);
+  }, 30000);
+});
+
+// 优雅关闭
+process.on('SIGTERM', () => {
+  console.log('⚠️  收到 SIGTERM，开始优雅关闭...');
+  server.close(() => {
+    console.log('✅ 服务已关闭');
+    process.exit(0);
+  });
 });

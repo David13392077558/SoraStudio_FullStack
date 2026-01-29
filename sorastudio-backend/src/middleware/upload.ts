@@ -1,10 +1,13 @@
 import multer from 'multer';
-import path from 'path';
 import { Request } from 'express';
+import { v4 as uuidv4 } from 'uuid';
 
 // 文件类型验证
 const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const allowedVideoTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/wmv', 'video/flv'];
+
+// 内存存储 Buffer Map (用于在 Render 等容器环境中)
+export const fileBuffers = new Map<string, { buffer: Buffer; mimetype: string; originalname: string }>();
 
 export const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const fieldName = file.fieldname;
@@ -52,19 +55,8 @@ export const limits = {
   }
 };
 
-// 存储配置
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../../uploads');
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    // 生成唯一文件名
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
-  }
-});
+// 使用内存存储替代磁盘存储 (适合容器环境)
+const storage = multer.memoryStorage();
 
 // 创建multer实例
 export const upload = multer({

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { taskQueue } from '../app';
 import { v4 as uuidv4 } from 'uuid';
+import { fileBuffers } from '../middleware/upload';
 
 export const analyzeVideoHandler = async (req: Request, res: Response) => {
   try {
@@ -11,18 +12,33 @@ export const analyzeVideoHandler = async (req: Request, res: Response) => {
     }
 
     const taskId = uuidv4();
+    const fileId = `${taskId}-video`;
 
-    // 添加任务到队列
+    // 将文件 Buffer 存储到内存中
+    fileBuffers.set(fileId, {
+      buffer: videoFile.buffer,
+      mimetype: videoFile.mimetype,
+      originalname: videoFile.originalname
+    });
+
+    // 添加任务到队列（传递 fileId 而不是文件路径）
     await taskQueue.add('analyze-video', {
       taskId,
       type: 'analysis',
-      videoPath: videoFile.path,
+      fileId,
+      originalname: videoFile.originalname,
+      size: videoFile.size
     });
 
     res.json({
       taskId,
       message: '视频分析任务已提交',
-      status: 'queued'
+      status: 'queued',
+      fileInfo: {
+        originalname: videoFile.originalname,
+        size: videoFile.size,
+        mimetype: videoFile.mimetype
+      }
     });
   } catch (error) {
     console.error('视频分析失败:', error);

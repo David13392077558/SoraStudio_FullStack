@@ -124,12 +124,12 @@ export const ProjectModel = {
 
   // 搜索项目
   search: (userId: string, query: string): Project[] => {
-    const userProjects = this.findByUserId(userId);
-    if (!query) return userProjects;
+    const userProjects = ProjectModel.findByUserId(userId);
+    if (!query || !userProjects) return userProjects || [];
 
-    return userProjects.filter(project =>
+    return userProjects.filter((project: Project) =>
       project.name.toLowerCase().includes(query.toLowerCase()) ||
-      project.tags?.some(tag => tag.toLowerCase().includes(query.toLowerCase()))
+      project.tags?.some((tag: string) => tag.toLowerCase().includes(query.toLowerCase()))
     );
   }
 };

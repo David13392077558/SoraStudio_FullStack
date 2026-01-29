@@ -50,7 +50,7 @@ const worker = new Worker('video-tasks', async (job) => {
     setTaskResult(job.data.taskId, {
       status: 'failed',
       progress: 0,
-      error: error.message
+      error: (error as Error).message
     });
     throw error;
   }
