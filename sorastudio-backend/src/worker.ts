@@ -3,7 +3,7 @@ import { taskQueue } from './app';
 import { setTaskResult } from './handlers/getTaskStatus';
 import { modelManager } from './models/ModelManager';
 
-// 创建worker
+// 创建 worker
 const worker = new Worker('video-tasks', async (job) => {
   console.log(`处理任务: ${job.name}, ID: ${job.data.taskId}`);
 
@@ -11,27 +11,33 @@ const worker = new Worker('video-tasks', async (job) => {
     let result;
 
     switch (job.name) {
-      case 'generate-prompt':
+      case 'generate-prompt': {
         const promptModel = modelManager.selectBestModel('prompt');
         if (!promptModel) {
           throw new Error('没有可用的提示词生成模型');
         }
         result = await promptModel.generatePrompt(job.data);
         break;
-      case 'generate-script':
+      }
+
+      case 'generate-script': {
         const scriptModel = modelManager.selectBestModel('script');
         if (!scriptModel) {
           throw new Error('没有可用的脚本生成模型');
         }
         result = await scriptModel.generateScript(job.data);
         break;
-      case 'analyze-video':
+      }
+
+      case 'analyze-video': {
         const analysisModel = modelManager.selectBestModel('analysis');
         if (!analysisModel) {
           throw new Error('没有可用的视频分析模型');
         }
         result = await analysisModel.analyzeVideo(job.data);
         break;
+      }
+
       default:
         throw new Error(`未知任务类型: ${job.name}`);
     }
@@ -45,13 +51,20 @@ const worker = new Worker('video-tasks', async (job) => {
 
     console.log(`任务完成: ${job.data.taskId}`);
     return result;
-  } catch (error) {
+
+  } catch (error: any) {
     console.error(`任务失败: ${job.data.taskId}`, error);
+
     setTaskResult(job.data.taskId, {
       status: 'failed',
       progress: 0,
+<<<<<<< HEAD
       error: (error as Error).message
+=======
+      error: error?.message || '未知错误'
+>>>>>>> 6365ea551c3f14b5479c27766b9428773db8d363
     });
+
     throw error;
   }
 }, {

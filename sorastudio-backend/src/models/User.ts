@@ -30,8 +30,7 @@ const projects: Map<string, Project> = new Map();
 
 // 用户相关操作
 export const UserModel = {
-  // 创建用户
-  create: (userData: Omit<User, 'id' | 'createdAt'>): User => {
+  create(userData: Omit<User, 'id' | 'createdAt'>): User {
     const user: User = {
       ...userData,
       id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -41,47 +40,37 @@ export const UserModel = {
     return user;
   },
 
-  // 通过邮箱查找用户
-  findByEmail: (email: string): User | null => {
+  findByEmail(email: string): User | null {
     for (const user of users.values()) {
-      if (user.email === email) {
-        return user;
-      }
+      if (user.email === email) return user;
     }
     return null;
   },
 
-  // 通过ID查找用户
-  findById: (id: string): User | null => {
+  findById(id: string): User | null {
     return users.get(id) || null;
   },
 
-  // 更新用户
-  update: (id: string, updates: Partial<User>): User | null => {
+  update(id: string, updates: Partial<User>): User | null {
     const user = users.get(id);
-    if (user) {
-      const updatedUser = { ...user, ...updates };
-      users.set(id, updatedUser);
-      return updatedUser;
-    }
-    return null;
+    if (!user) return null;
+    const updatedUser = { ...user, ...updates };
+    users.set(id, updatedUser);
+    return updatedUser;
   },
 
-  // 删除用户
-  delete: (id: string): boolean => {
+  delete(id: string): boolean {
     return users.delete(id);
   },
 
-  // 获取所有用户（管理员功能）
-  getAll: (): User[] => {
+  getAll(): User[] {
     return Array.from(users.values());
   }
 };
 
 // 项目相关操作
 export const ProjectModel = {
-  // 创建项目
-  create: (projectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>): Project => {
+  create(projectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>): Project {
     const project: Project = {
       ...projectData,
       id: `project_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -92,36 +81,33 @@ export const ProjectModel = {
     return project;
   },
 
-  // 通过ID查找项目
-  findById: (id: string): Project | null => {
+  findById(id: string): Project | null {
     return projects.get(id) || null;
   },
 
-  // 通过用户ID查找项目
-  findByUserId: (userId: string): Project[] => {
-    return Array.from(projects.values()).filter(project => project.userId === userId);
+  findByUserId(userId: string): Project[] {
+    return Array.from(projects.values()).filter(p => p.userId === userId);
   },
 
-  // 更新项目
-  update: (id: string, updates: Partial<Project>): Project | null => {
+  update(id: string, updates: Partial<Project>): Project | null {
     const project = projects.get(id);
-    if (project) {
-      const updatedProject = {
-        ...project,
-        ...updates,
-        updatedAt: new Date()
-      };
-      projects.set(id, updatedProject);
-      return updatedProject;
-    }
-    return null;
+    if (!project) return null;
+
+    const updatedProject = {
+      ...project,
+      ...updates,
+      updatedAt: new Date(),
+    };
+
+    projects.set(id, updatedProject);
+    return updatedProject;
   },
 
-  // 删除项目
-  delete: (id: string): boolean => {
+  delete(id: string): boolean {
     return projects.delete(id);
   },
 
+<<<<<<< HEAD
   // 搜索项目
   search: (userId: string, query: string): Project[] => {
     const userProjects = ProjectModel.findByUserId(userId);
@@ -131,5 +117,22 @@ export const ProjectModel = {
       project.name.toLowerCase().includes(query.toLowerCase()) ||
       project.tags?.some((tag: string) => tag.toLowerCase().includes(query.toLowerCase()))
     );
+=======
+  search(userId: string, query: string): Project[] {
+    const userProjects = this.findByUserId(userId);
+    if (!query) return userProjects;
+
+    const lower = query.toLowerCase();
+
+    return userProjects.filter((project: Project) => {
+      const nameMatch = project.name.toLowerCase().includes(lower);
+      const tagMatch = project.tags
+        ? project.tags.some((tag: string) => tag.toLowerCase().includes(lower))
+        : false;
+
+      return nameMatch || tagMatch;
+    });
+>>>>>>> 6365ea551c3f14b5479c27766b9428773db8d363
   }
 };
+
