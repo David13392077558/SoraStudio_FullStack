@@ -58,11 +58,7 @@ const worker = new Worker('video-tasks', async (job) => {
     setTaskResult(job.data.taskId, {
       status: 'failed',
       progress: 0,
-<<<<<<< HEAD
-      error: (error as Error).message
-=======
       error: error?.message || '未知错误'
->>>>>>> 6365ea551c3f14b5479c27766b9428773db8d363
     });
 
     throw error;

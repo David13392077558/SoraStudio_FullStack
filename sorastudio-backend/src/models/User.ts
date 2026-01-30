@@ -103,21 +103,6 @@ export const ProjectModel = {
     return updatedProject;
   },
 
-  delete(id: string): boolean {
-    return projects.delete(id);
-  },
-
-<<<<<<< HEAD
-  // 搜索项目
-  search: (userId: string, query: string): Project[] => {
-    const userProjects = ProjectModel.findByUserId(userId);
-    if (!query || !userProjects) return userProjects || [];
-
-    return userProjects.filter((project: Project) =>
-      project.name.toLowerCase().includes(query.toLowerCase()) ||
-      project.tags?.some((tag: string) => tag.toLowerCase().includes(query.toLowerCase()))
-    );
-=======
   search(userId: string, query: string): Project[] {
     const userProjects = this.findByUserId(userId);
     if (!query) return userProjects;
@@ -132,7 +117,6 @@ export const ProjectModel = {
 
       return nameMatch || tagMatch;
     });
->>>>>>> 6365ea551c3f14b5479c27766b9428773db8d363
   }
 };
 

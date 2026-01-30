@@ -2,11 +2,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import {
   AIModelAdapter,
   AIModelConfig,
-  GeneratePromptRequest,
   GeneratePromptResponse,
-  GenerateScriptRequest,
   GenerateScriptResponse,
-  AnalyzeVideoRequest,
   AnalyzeVideoResponse
 } from './types';
 import * as fs from 'fs';
@@ -40,16 +37,11 @@ export class GeminiAdapter implements AIModelAdapter {
       prompt += `\n请生成结构化的提示词，包含镜头语言、构图、光影等专业参数。`;
 
       let result;
-<<<<<<< HEAD
-      
-      // 支持新的 fileId 格式
+
       const imageFileId = request.imageFileId;
-      const videoFileId = request.videoFileId;
       const imagePath = request.imagePath;
-      const videoPath = request.videoPath;
 
       if (imageFileId) {
-        // 从内存 Buffer 获取图片
         const imageBuffer = getFileBuffer(imageFileId);
         if (imageBuffer) {
           const imagePart = {
@@ -59,24 +51,14 @@ export class GeminiAdapter implements AIModelAdapter {
             },
           };
 
-          const fullPrompt = [
-            { text: prompt },
-            imagePart,
-          ];
-
+          const fullPrompt = [{ text: prompt }, imagePart];
           result = await this.model.generateContent(fullPrompt);
           cleanupFileBuffer(imageFileId);
         } else {
           result = await this.model.generateContent(prompt);
         }
       } else if (imagePath && fs.existsSync(imagePath)) {
-        // 兼容旧的文件路径格式
         const imageData = fs.readFileSync(imagePath);
-=======
-
-      if (request.imagePath && fs.existsSync(request.imagePath)) {
-        const imageData = fs.readFileSync(request.imagePath);
->>>>>>> 6365ea551c3f14b5479c27766b9428773db8d363
         const imagePart = {
           inlineData: {
             data: imageData.toString('base64'),
@@ -104,11 +86,7 @@ export class GeminiAdapter implements AIModelAdapter {
       };
     } catch (error: any) {
       console.error('Gemini generatePrompt error:', error);
-<<<<<<< HEAD
-      throw new Error(`Gemini API调用失败: ${(error as Error).message}`);
-=======
       throw new Error(`Gemini API调用失败: ${error?.message || '未知错误'}`);
->>>>>>> 6365ea551c3f14b5479c27766b9428773db8d363
     }
   }
 
@@ -119,12 +97,10 @@ export class GeminiAdapter implements AIModelAdapter {
       prompt += `风格：${request.style}\n\n`;
       prompt += `请生成包含开场白、卖点介绍、用户见证、促销活动的完整带货脚本。`;
 
-<<<<<<< HEAD
       const imageFileId = request.productImageFileId;
       const productImagePath = request.productImagePath;
 
       if (imageFileId) {
-        // 从内存 Buffer 获取产品图片
         const imageBuffer = getFileBuffer(imageFileId);
         if (imageBuffer) {
           const imagePart = {
@@ -134,14 +110,11 @@ export class GeminiAdapter implements AIModelAdapter {
             },
           };
 
-          const fullPrompt = [
-            { text: prompt },
-            imagePart,
-          ];
-
+          const fullPrompt = [{ text: prompt }, imagePart];
           const result = await this.model.generateContent(fullPrompt);
           const response = await result.response;
           const script = response.text();
+
           cleanupFileBuffer(imageFileId);
 
           return {
@@ -154,16 +127,10 @@ export class GeminiAdapter implements AIModelAdapter {
             },
           };
         }
-        // imageBuffer 为空时，继续往下走没有图片的流程
       }
-      
+
       if (productImagePath && fs.existsSync(productImagePath)) {
-        // 兼容旧的文件路径格式
         const imageData = fs.readFileSync(productImagePath);
-=======
-      if (request.productImagePath && fs.existsSync(request.productImagePath)) {
-        const imageData = fs.readFileSync(request.productImagePath);
->>>>>>> 6365ea551c3f14b5479c27766b9428773db8d363
         const imagePart = {
           inlineData: {
             data: imageData.toString('base64'),
@@ -172,7 +139,6 @@ export class GeminiAdapter implements AIModelAdapter {
         };
 
         const fullPrompt = [{ text: prompt }, imagePart];
-
         const result = await this.model.generateContent(fullPrompt);
         const response = await result.response;
         const script = response.text();
@@ -186,66 +152,47 @@ export class GeminiAdapter implements AIModelAdapter {
             has_image: true,
           },
         };
-      } else {
-        const result = await this.model.generateContent(prompt);
-        const response = await result.response;
-        const script = response.text();
-
-        return {
-          script,
-          highlights: this.extractHighlights(script),
-          style: request.style,
-          metadata: {
-            model: this.config.modelName,
-            has_image: false,
-          },
-        };
       }
+
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      const script = response.text();
+
+      return {
+        script,
+        highlights: this.extractHighlights(script),
+        style: request.style,
+        metadata: {
+          model: this.config.modelName,
+          has_image: false,
+        },
+      };
     } catch (error: any) {
       console.error('Gemini generateScript error:', error);
-<<<<<<< HEAD
-      throw new Error(`Gemini API调用失败: ${(error as Error).message}`);
-=======
       throw new Error(`Gemini API调用失败: ${error?.message || '未知错误'}`);
->>>>>>> 6365ea551c3f14b5479c27766b9428773db8d363
     }
   }
 
   async analyzeVideo(request: any): Promise<AnalyzeVideoResponse> {
     try {
-<<<<<<< HEAD
       const videoFileId = request.fileId;
       const videoPath = request.videoPath;
       let tempFilePath: string | null = null;
-=======
-      const framePaths = await this.extractVideoFrames(request.videoPath);
->>>>>>> 6365ea551c3f14b5479c27766b9428773db8d363
 
       try {
-        // 支持新的 fileId 格式
         if (videoFileId) {
           tempFilePath = await bufferToTempFile(videoFileId);
-          if (!tempFilePath) {
-            throw new Error('无法从内存中获取视频文件');
-          }
+          if (!tempFilePath) throw new Error('无法从内存中获取视频文件');
         } else if (!videoPath || !fs.existsSync(videoPath)) {
           throw new Error('视频文件不存在或无效');
         }
 
-<<<<<<< HEAD
-        // 对于视频分析，我们需要先提取关键帧
         const workingPath = tempFilePath || videoPath;
         const framePaths = await this.extractVideoFrames(workingPath);
 
-        if (framePaths.length === 0) {
-          throw new Error('无法提取视频帧');
-        }
+        if (framePaths.length === 0) throw new Error('无法提取视频帧');
 
-        // 使用第一帧和中间帧进行分析
         const analysisPrompt = `请分析这个视频的风格特征，包括：
-=======
-      const analysisPrompt = `请分析这个视频的风格特征，包括：
->>>>>>> 6365ea551c3f14b5479c27766b9428773db8d363
 1. 视觉风格（色彩、构图、光影）
 2. 镜头语言（运动、角度、景别）
 3. 整体氛围和情感表达
@@ -264,27 +211,14 @@ export class GeminiAdapter implements AIModelAdapter {
           },
         }));
 
-<<<<<<< HEAD
-        const fullPrompt = [
-          { text: analysisPrompt },
-          ...imageParts,
-        ];
-=======
-      const fullPrompt = [{ text: analysisPrompt }, ...imageParts];
->>>>>>> 6365ea551c3f14b5479c27766b9428773db8d363
-
+        const fullPrompt = [{ text: analysisPrompt }, ...imageParts];
         const result = await this.model.generateContent(fullPrompt);
         const response = await result.response;
         const analysis = response.text();
 
-<<<<<<< HEAD
-        // 解析分析结果
         const parsedResult = this.parseVideoAnalysis(analysis);
 
-        // 清理临时文件和内存缓冲
-        if (videoFileId) {
-          cleanupFileBuffer(videoFileId);
-        }
+        if (videoFileId) cleanupFileBuffer(videoFileId);
 
         return {
           ...parsedResult,
@@ -294,28 +228,11 @@ export class GeminiAdapter implements AIModelAdapter {
           },
         };
       } finally {
-        // 清理临时文件
-        if (tempFilePath) {
-          cleanupTempFile(tempFilePath);
-        }
+        if (tempFilePath) cleanupTempFile(tempFilePath);
       }
-    } catch (error) {
-      console.error('Gemini analyzeVideo error:', error);
-      throw new Error(`Gemini API调用失败: ${(error as Error).message}`);
-=======
-      const parsedResult = this.parseVideoAnalysis(analysis);
-
-      return {
-        ...parsedResult,
-        metadata: {
-          model: this.config.modelName,
-          frames_analyzed: framePaths.length,
-        },
-      };
     } catch (error: any) {
       console.error('Gemini analyzeVideo error:', error);
       throw new Error(`Gemini API调用失败: ${error?.message || '未知错误'}`);
->>>>>>> 6365ea551c3f14b5479c27766b9428773db8d363
     }
   }
 
@@ -340,7 +257,6 @@ export class GeminiAdapter implements AIModelAdapter {
   }
 
   private async extractVideoFrames(videoPath: string): Promise<string[]> {
-    // TODO: 使用 ffmpeg 提取帧
     return [];
   }
 
