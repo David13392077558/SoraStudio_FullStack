@@ -1,13 +1,23 @@
-// src/utils/diagnostics.ts
+import { Request, Response } from 'express';
 
-export function diagnosticHandler() {
-  console.log("Diagnostics running...");
+// 诊断接口：返回系统状态
+export function diagnosticHandler(req: Request, res: Response) {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    message: '诊断接口正常运行',
+  });
 }
 
-export function startPeriodicCleanup() {
-  console.log("Periodic cleanup started...");
+// 定期清理任务：接受间隔时间（毫秒）
+export function startPeriodicCleanup(interval: number) {
+  console.log(`🧹 定期清理任务已启动，每 ${interval / 1000} 秒执行一次`);
+
   setInterval(() => {
-    console.log("Running cleanup task...");
-  }, 1000 * 60 * 60); // 每小时执行一次
+    console.log(`🧹 执行清理任务: ${new Date().toISOString()}`);
+    // 这里可以加入你真正的清理逻辑，例如：
+    // - 清理临时文件
+    // - 清理 Redis 过期任务
+    // - 清理缓存
+  }, interval);
 }
-
