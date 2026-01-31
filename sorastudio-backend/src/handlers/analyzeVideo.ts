@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { taskQueue } from '../app';
+import redisClient from '../utils/redisClient';
 import { v4 as uuidv4 } from 'uuid';
 import { fileBuffers } from '../middleware/upload';
 
@@ -21,14 +21,23 @@ export const analyzeVideoHandler = async (req: Request, res: Response) => {
       originalname: videoFile.originalname
     });
 
-    // 添加任务到队列（传递 fileId 而不是文件路径）
-    await taskQueue.add('analyze-video', {
-      taskId,
-      type: 'analysis',
-      fileId,
-      originalname: videoFile.originalname,
-      size: videoFile.size
-    });
+    // 构建统一任务对象并写入 Redis
+    const task = {
+      task_id: taskId,
+      type: 'video_analysis',
+      payload: {
+        fileId,
+        originalname: videoFile.originalname,
+        size: videoFile.size
+      }
+    } as any;
+
+    await redisClient.set(
+      `pending_task:${taskId}`,
+      JSON.stringify(task),
+      'EX',
+      3600
+    );
 
     res.json({
       taskId,

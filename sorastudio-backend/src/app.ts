@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { Queue, Worker } from 'bullmq';
+// BullMQ 已迁移到外部 Python Worker，移除 bullmq 相关代码
 import { generatePromptHandler } from './handlers/generatePrompt';
 import { generateScriptHandler } from './handlers/generateScript';
 import { analyzeVideoHandler } from './handlers/analyzeVideo';
@@ -37,9 +37,7 @@ const redisConfig = {
   tls: process.env.REDIS_TLS === 'true' ? {} : undefined,
 };
 
-export const taskQueue = new Queue('video-tasks', {
-  connection: redisConfig as any,
-});
+// 任务由 Python Worker 轮询 Redis 处理，后端不再创建 BullMQ 队列
 
 // 认证路由（公开）
 app.post('/api/auth/register', registerHandler);

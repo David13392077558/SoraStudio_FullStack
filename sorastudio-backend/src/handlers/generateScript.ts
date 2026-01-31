@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { taskQueue } from '../app';
+import redisClient from '../utils/redisClient';
 import { v4 as uuidv4 } from 'uuid';
 import { fileBuffers } from '../middleware/upload';
 
@@ -22,14 +22,15 @@ export const generateScriptHandler = async (req: Request, res: Response) => {
 
     const taskId = uuidv4();
 
-    // 用于传递给 worker 的数据
-    const fileData: any = {
-      taskId,
-      type: 'script',
-      productUrl,
-      productDescription,
-      style,
-    };
+    const task = {
+      task_id: taskId,
+      type: 'generate_script',
+      payload: {
+        productUrl,
+        productDescription,
+        style
+      }
+    } as any;
 
     // 处理产品图片
     if (productImageFile) {
@@ -41,22 +42,26 @@ export const generateScriptHandler = async (req: Request, res: Response) => {
         originalname: productImageFile.originalname
       });
 
-      fileData.productImageFileId = imageFileId;
-      fileData.imageInfo = {
+      task.payload.productImageFileId = imageFileId;
+      task.payload.imageInfo = {
         originalname: productImageFile.originalname,
         size: productImageFile.size,
         mimetype: productImageFile.mimetype
       };
     }
 
-    // 添加任务到队列（只添加一次）
-    await taskQueue.add('generate-script', fileData);
+    await redisClient.set(
+      `pending_task:${taskId}`,
+      JSON.stringify(task),
+      'EX',
+      3600
+    );
 
     res.json({
       taskId,
       message: '脚本生成任务已提交',
       status: 'queued',
-      fileInfo: fileData.imageInfo
+      fileInfo: task.payload.imageInfo
     });
 
   } catch (error: any) {

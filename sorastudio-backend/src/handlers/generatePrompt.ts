@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { taskQueue } from '../app';
+import redisClient from '../utils/redisClient';
 import { v4 as uuidv4 } from 'uuid';
 import { fileBuffers } from '../middleware/upload';
 
@@ -27,13 +27,15 @@ export const generatePromptHandler = async (req: Request, res: Response) => {
 
     const taskId = uuidv4();
 
-    // 用于传递给 worker 的数据
-    const fileData: any = {
-      taskId,
-      type: 'prompt',
-      style,
-      description,
-    };
+    // 用于传递给 worker 的统一任务对象（遵循 task schema）
+    const task = {
+      task_id: taskId,
+      type: 'video_generation',
+      payload: {
+        style,
+        description,
+      }
+    } as any;
 
     // 处理图片
     if (imageFile) {
@@ -44,8 +46,8 @@ export const generatePromptHandler = async (req: Request, res: Response) => {
         originalname: imageFile.originalname
       });
 
-      fileData.imageFileId = imageFileId;
-      fileData.imageInfo = {
+      task.payload.imageFileId = imageFileId;
+      task.payload.imageInfo = {
         originalname: imageFile.originalname,
         size: imageFile.size,
         mimetype: imageFile.mimetype
@@ -61,22 +63,27 @@ export const generatePromptHandler = async (req: Request, res: Response) => {
         originalname: videoFile.originalname
       });
 
-      fileData.videoFileId = videoFileId;
-      fileData.videoInfo = {
+      task.payload.videoFileId = videoFileId;
+      task.payload.videoInfo = {
         originalname: videoFile.originalname,
         size: videoFile.size,
         mimetype: videoFile.mimetype
       };
     }
 
-    // 添加任务到队列（只添加一次）
-    await taskQueue.add('generate-prompt', fileData);
+    // 写入 Redis 作为待处理任务
+    await redisClient.set(
+      `pending_task:${taskId}`,
+      JSON.stringify(task),
+      'EX',
+      3600
+    );
 
     res.json({
       taskId,
       message: '提示词生成任务已提交',
       status: 'queued',
-      fileInfo: fileData.imageInfo || fileData.videoInfo
+      fileInfo: task.payload.imageInfo || task.payload.videoInfo
     });
 
   } catch (error: any) {
