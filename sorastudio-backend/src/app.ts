@@ -27,7 +27,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb' }));
 
 // 初始化 Redis 配置
-initializeRedisConfig().catch(console.error);
+initializeRedisConfig();
 
 // 任务队列配置
 const redisConfig = {
