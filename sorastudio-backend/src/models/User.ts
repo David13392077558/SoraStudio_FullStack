@@ -117,6 +117,10 @@ export const ProjectModel = {
 
       return nameMatch || tagMatch;
     });
+  },
+
+  // ⭐ 必须添加的 delete 方法（Render 报错的根源）
+  delete(id: string): boolean {
+    return projects.delete(id);
   }
 };
-
