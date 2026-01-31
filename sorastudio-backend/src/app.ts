@@ -68,6 +68,8 @@ app.post('/api/ai/generate-script', optionalAuth, upload.fields([
 
 app.post('/api/ai/analyze-video', optionalAuth, upload.single('video'), handleMulterError, analyzeVideoHandler);
 
+// 兼容旧路径与新的 AI 任务查询路径
+app.get('/api/ai/task/:taskId', optionalAuth, getTaskStatusHandler);
 app.get('/api/tasks/:taskId', optionalAuth, getTaskStatusHandler);
 
 // 健康检查
