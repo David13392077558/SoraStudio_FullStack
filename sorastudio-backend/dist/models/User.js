@@ -82,5 +82,9 @@ exports.ProjectModel = {
                 : false;
             return nameMatch || tagMatch;
         });
+    },
+    // ⭐ 必须添加的 delete 方法（Render 报错的根源）
+    delete(id) {
+        return projects.delete(id);
     }
 };

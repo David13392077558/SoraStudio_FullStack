@@ -3,11 +3,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.taskQueue = void 0;
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
-const bullmq_1 = require("bullmq");
+// BullMQ 已迁移到外部 Python Worker，移除 bullmq 相关代码
 const generatePrompt_1 = require("./handlers/generatePrompt");
 const generateScript_1 = require("./handlers/generateScript");
 const analyzeVideo_1 = require("./handlers/analyzeVideo");
@@ -30,7 +29,7 @@ app.use((0, cors_1.default)({
 app.use(express_1.default.json({ limit: '50mb' }));
 app.use(express_1.default.urlencoded({ limit: '50mb' }));
 // 初始化 Redis 配置
-(0, redisConfig_1.initializeRedisConfig)().catch(console.error);
+(0, redisConfig_1.initializeRedisConfig)();
 // 任务队列配置
 const redisConfig = {
     host: process.env.REDIS_HOST || 'localhost',
@@ -38,9 +37,7 @@ const redisConfig = {
     password: process.env.REDIS_PASSWORD,
     tls: process.env.REDIS_TLS === 'true' ? {} : undefined,
 };
-exports.taskQueue = new bullmq_1.Queue('video-tasks', {
-    connection: redisConfig,
-});
+// 任务由 Python Worker 轮询 Redis 处理，后端不再创建 BullMQ 队列
 // 认证路由（公开）
 app.post('/api/auth/register', auth_1.registerHandler);
 app.post('/api/auth/login', auth_1.loginHandler);
@@ -62,6 +59,8 @@ app.post('/api/ai/generate-script', auth_2.optionalAuth, upload_1.upload.fields(
     { name: 'productImage', maxCount: 1 }
 ]), upload_1.handleMulterError, generateScript_1.generateScriptHandler);
 app.post('/api/ai/analyze-video', auth_2.optionalAuth, upload_1.upload.single('video'), upload_1.handleMulterError, analyzeVideo_1.analyzeVideoHandler);
+// 兼容旧路径与新的 AI 任务查询路径
+app.get('/api/ai/task/:taskId', auth_2.optionalAuth, getTaskStatus_1.getTaskStatusHandler);
 app.get('/api/tasks/:taskId', auth_2.optionalAuth, getTaskStatus_1.getTaskStatusHandler);
 // 健康检查
 app.get('/health', (req, res) => {

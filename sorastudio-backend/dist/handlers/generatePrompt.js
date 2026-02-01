@@ -1,7 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generatePromptHandler = void 0;
-const app_1 = require("../app");
+const redisClient_1 = __importDefault(require("../utils/redisClient"));
 const uuid_1 = require("uuid");
 const upload_1 = require("../middleware/upload");
 const generatePromptHandler = async (req, res) => {
@@ -17,12 +20,14 @@ const generatePromptHandler = async (req, res) => {
             return res.status(400).json({ error: '请上传图片或视频文件' });
         }
         const taskId = (0, uuid_1.v4)();
-        // 用于传递给 worker 的数据
-        const fileData = {
-            taskId,
-            type: 'prompt',
-            style,
-            description,
+        // 用于传递给 worker 的统一任务对象（遵循 task schema）
+        const task = {
+            task_id: taskId,
+            type: 'video_generation',
+            payload: {
+                style,
+                description,
+            }
         };
         // 处理图片
         if (imageFile) {
@@ -32,8 +37,8 @@ const generatePromptHandler = async (req, res) => {
                 mimetype: imageFile.mimetype,
                 originalname: imageFile.originalname
             });
-            fileData.imageFileId = imageFileId;
-            fileData.imageInfo = {
+            task.payload.imageFileId = imageFileId;
+            task.payload.imageInfo = {
                 originalname: imageFile.originalname,
                 size: imageFile.size,
                 mimetype: imageFile.mimetype
@@ -47,20 +52,20 @@ const generatePromptHandler = async (req, res) => {
                 mimetype: videoFile.mimetype,
                 originalname: videoFile.originalname
             });
-            fileData.videoFileId = videoFileId;
-            fileData.videoInfo = {
+            task.payload.videoFileId = videoFileId;
+            task.payload.videoInfo = {
                 originalname: videoFile.originalname,
                 size: videoFile.size,
                 mimetype: videoFile.mimetype
             };
         }
-        // 添加任务到队列（只添加一次）
-        await app_1.taskQueue.add('generate-prompt', fileData);
+        // 写入 Redis 作为待处理任务
+        await redisClient_1.default.set(`pending_task:${taskId}`, JSON.stringify(task), 'EX', 3600);
         res.json({
             taskId,
             message: '提示词生成任务已提交',
             status: 'queued',
-            fileInfo: fileData.imageInfo || fileData.videoInfo
+            fileInfo: task.payload.imageInfo || task.payload.videoInfo
         });
     }
     catch (error) {

@@ -1,19 +1,12 @@
-import Redis from 'ioredis';
+import { redisClient } from "../utils/redisClient";
 
 export class CacheService {
-  private redis: Redis;
+  private redis = redisClient;
   private defaultTTL = 3600; // 1小时
 
   constructor() {
-    this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD || undefined,
-      db: parseInt(process.env.REDIS_DB || '1'), // 使用不同的数据库避免与队列冲突
-    });
-
-    this.redis.on('error', (error) => {
-      console.error('Redis cache error:', error);
+    this.redis.on("error", (error) => {
+      console.error("Redis cache error:", error);
     });
   }
 
@@ -23,7 +16,7 @@ export class CacheService {
       const serializedValue = JSON.stringify(value);
       await this.redis.setex(key, ttl || this.defaultTTL, serializedValue);
     } catch (error) {
-      console.error('Cache set error:', error);
+      console.error("Cache set error:", error);
     }
   }
 
@@ -33,7 +26,7 @@ export class CacheService {
       const value = await this.redis.get(key);
       return value ? JSON.parse(value) : null;
     } catch (error) {
-      console.error('Cache get error:', error);
+      console.error("Cache get error:", error);
       return null;
     }
   }
@@ -43,7 +36,7 @@ export class CacheService {
     try {
       await this.redis.del(key);
     } catch (error) {
-      console.error('Cache del error:', error);
+      console.error("Cache del error:", error);
     }
   }
 
@@ -53,7 +46,7 @@ export class CacheService {
       const serializedValue = JSON.stringify(value);
       await this.redis.hset(key, field, serializedValue);
     } catch (error) {
-      console.error('Cache hset error:', error);
+      console.error("Cache hset error:", error);
     }
   }
 
@@ -63,7 +56,7 @@ export class CacheService {
       const value = await this.redis.hget(key, field);
       return value ? JSON.parse(value) : null;
     } catch (error) {
-      console.error('Cache hget error:', error);
+      console.error("Cache hget error:", error);
       return null;
     }
   }
@@ -82,7 +75,7 @@ export class CacheService {
       }
       return parsed;
     } catch (error) {
-      console.error('Cache hgetall error:', error);
+      console.error("Cache hgetall error:", error);
       return null;
     }
   }
@@ -106,7 +99,6 @@ export class CacheService {
       timestamp: new Date().toISOString(),
     };
 
-    // 保持最近50条记录
     const existingHistory = await this.get(historyKey) || [];
     existingHistory.unshift(historyItem);
     if (existingHistory.length > 50) {
@@ -121,7 +113,7 @@ export class CacheService {
     return await this.get(`user:${userId}:history`) || [];
   }
 
-  // 缓存模型响应（避免重复调用）
+  // 缓存模型响应
   async cacheModelResponse(modelName: string, inputHash: string, response: any): Promise<void> {
     const cacheKey = `model:${modelName}:${inputHash}`;
     await this.set(cacheKey, response, 1800); // 30分钟
@@ -136,10 +128,9 @@ export class CacheService {
   // 清理过期缓存
   async cleanup(): Promise<void> {
     try {
-      // Redis会自动清理过期键，这里可以添加额外的清理逻辑
-      console.log('Cache cleanup completed');
+      console.log("Cache cleanup completed");
     } catch (error) {
-      console.error('Cache cleanup error:', error);
+      console.error("Cache cleanup error:", error);
     }
   }
 

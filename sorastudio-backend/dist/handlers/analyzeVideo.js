@@ -1,7 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.analyzeVideoHandler = void 0;
-const app_1 = require("../app");
+const redisClient_1 = __importDefault(require("../utils/redisClient"));
 const uuid_1 = require("uuid");
 const upload_1 = require("../middleware/upload");
 const analyzeVideoHandler = async (req, res) => {
@@ -18,14 +21,17 @@ const analyzeVideoHandler = async (req, res) => {
             mimetype: videoFile.mimetype,
             originalname: videoFile.originalname
         });
-        // 添加任务到队列（传递 fileId 而不是文件路径）
-        await app_1.taskQueue.add('analyze-video', {
-            taskId,
-            type: 'analysis',
-            fileId,
-            originalname: videoFile.originalname,
-            size: videoFile.size
-        });
+        // 构建统一任务对象并写入 Redis
+        const task = {
+            task_id: taskId,
+            type: 'video_analysis',
+            payload: {
+                fileId,
+                originalname: videoFile.originalname,
+                size: videoFile.size
+            }
+        };
+        await redisClient_1.default.set(`pending_task:${taskId}`, JSON.stringify(task), 'EX', 3600);
         res.json({
             taskId,
             message: '视频分析任务已提交',
