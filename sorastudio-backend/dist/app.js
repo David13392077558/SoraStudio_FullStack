@@ -19,14 +19,28 @@ const upload_2 = require("./middleware/upload");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 // 中间件
-app.use((0, cors_1.default)({
-    origin: [process.env.VITE_BACKEND_URL || '*', 'http://localhost:5173', 'http://localhost:3000'],
+app.use(cors({
+    origin: [
+        'http://localhost:5173',
+        'http://localhost:3000',
+
+        // Vercel 正式域名
+        'https://sorastudio-frontend-v2.vercel.app',
+
+        // Vercel Git 分支预览域名
+        'https://sorastudio-frontend-v2-git-main-davids-projects-d041d44b.vercel.app',
+
+        // Vercel 自动生成的部署域名
+        'https://sorastudio-frontend-v2-by2abzpca-davids-projects-d041d44b.vercel.app'
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express_1.default.json({ limit: '50mb' }));
-app.use(express_1.default.urlencoded({ limit: '50mb' }));
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb' }));
+
 // 初始化 Redis（使用 REDIS_URL）
 (0, redisConfig_1.initializeRedisConfig)();
 // 认证路由
