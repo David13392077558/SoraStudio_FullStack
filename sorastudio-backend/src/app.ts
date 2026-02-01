@@ -37,6 +37,9 @@ const allowedOrigins = [
 
   // 当前部署使用的域名
   'https://sorastudio-frontend-v2-by2abzpca-davids-projects-d041d44b.vercel.app',
+
+  // 新增的 Vercel preview 域名
+  'https://sorastudio-frontend-v2-722dtknsx-davids-projects-d041d44b.vercel.app',
 ];
 
 app.use(cors({
@@ -61,23 +64,23 @@ app.use(express.urlencoded({ limit: '50mb' }));
 initializeRedisConfig();
 
 // 认证路由
-app.post('/api/auth/register', registerHandler);
-app.post('/api/auth/login', loginHandler);
+app.post('/auth/register', registerHandler);
+app.post('/auth/login', loginHandler);
 
 // 需要认证的路由
-app.get('/api/auth/profile', authenticateToken, getProfileHandler);
-app.put('/api/auth/profile', authenticateToken, updateProfileHandler);
-app.put('/api/auth/change-password', authenticateToken, changePasswordHandler);
+app.get('/auth/profile', authenticateToken, getProfileHandler);
+app.put('/auth/profile', authenticateToken, updateProfileHandler);
+app.put('/auth/change-password', authenticateToken, changePasswordHandler);
 
 // 项目管理路由
-app.post('/api/projects', authenticateToken, createProjectHandler);
-app.get('/api/projects', authenticateToken, getUserProjectsHandler);
-app.put('/api/projects/:projectId', authenticateToken, updateProjectHandler);
-app.delete('/api/projects/:projectId', authenticateToken, deleteProjectHandler);
+app.post('/projects', authenticateToken, createProjectHandler);
+app.get('/projects', authenticateToken, getUserProjectsHandler);
+app.put('/projects/:projectId', authenticateToken, updateProjectHandler);
+app.delete('/projects/:projectId', authenticateToken, deleteProjectHandler);
 
 // AI 功能路由
 app.post(
-  '/api/ai/generate-prompt',
+  '/ai/generate-prompt',
   optionalAuth,
   upload.fields([
     { name: 'image', maxCount: 1 },
@@ -88,7 +91,7 @@ app.post(
 );
 
 app.post(
-  '/api/ai/generate-script',
+  '/ai/generate-script',
   optionalAuth,
   upload.fields([
     { name: 'productImage', maxCount: 1 }
@@ -98,7 +101,7 @@ app.post(
 );
 
 app.post(
-  '/api/ai/analyze-video',
+  '/ai/analyze-video',
   optionalAuth,
   upload.single('video'),
   handleMulterError,
@@ -106,8 +109,8 @@ app.post(
 );
 
 // 任务查询
-app.get('/api/ai/task/:taskId', optionalAuth, getTaskStatusHandler);
-app.get('/api/tasks/:taskId', optionalAuth, getTaskStatusHandler);
+app.get('/ai/task/:taskId', optionalAuth, getTaskStatusHandler);
+app.get('/tasks/:taskId', optionalAuth, getTaskStatusHandler);
 
 // 健康检查
 app.get('/health', (req, res) => {
@@ -123,7 +126,7 @@ app.get('/health', (req, res) => {
 });
 
 // 诊断接口
-app.get('/api/diagnostics', diagnosticHandler);
+app.get('/diagnostics', diagnosticHandler);
 
 // 全局错误处理
 app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -147,7 +150,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`📍 API 基础 URL: http://0.0.0.0:${PORT}`);
   console.log(`🔄 Redis URL: ${process.env.REDIS_URL}`);
   console.log(`🌍 CORS 允许源: ${allowedOrigins.join(', ')}`);
-  console.log(`📊 诊断接口: GET http://localhost:${PORT}/api/diagnostics`);
+  console.log(`📊 诊断接口: GET http://localhost:${PORT}/diagnostics`);
 
   startPeriodicCleanup(600000);
 

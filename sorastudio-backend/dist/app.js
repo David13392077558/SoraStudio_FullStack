@@ -15,36 +15,31 @@ const upload_1 = require("./middleware/upload");
 const auth_2 = require("./middleware/auth");
 const redisConfig_1 = require("./utils/redisConfig");
 const diagnostics_1 = require("./utils/diagnostics");
+const upload_2 = require("./middleware/upload");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
-// 中间件 - CORS
-const allowedOrigins = [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    // Vercel 正式域名
-    'https://sorastudio-frontend-v2.vercel.app',
-    // Vercel Git 分支预览域名
-    'https://sorastudio-frontend-v2-git-main-davids-projects-d041d44b.vercel.app',
-    // 当前部署使用的域名
-    'https://sorastudio-frontend-v2-by2abzpca-davids-projects-d041d44b.vercel.app',
-];
-app.use((0, cors_1.default)({
-    origin: (origin, callback) => {
-        // 允许无 Origin 的请求（如 Postman、服务器内部调用）
-        if (!origin)
-            return callback(null, true);
-        if (allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        }
-        console.warn('❌ 拒绝的 CORS 来源:', origin);
-        return callback(new Error('Not allowed by CORS'));
-    },
+// 中间件
+app.use(cors({
+    origin: [
+        'http://localhost:5173',
+        'http://localhost:3000',
+
+        // Vercel 正式域名
+        'https://sorastudio-frontend-v2.vercel.app',
+
+        // Vercel Git 分支预览域名
+        'https://sorastudio-frontend-v2-git-main-davids-projects-d041d44b.vercel.app',
+
+        // Vercel 自动生成的部署域名
+        'https://sorastudio-frontend-v2-by2abzpca-davids-projects-d041d44b.vercel.app'
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express_1.default.json({ limit: '50mb' }));
-app.use(express_1.default.urlencoded({ limit: '50mb' }));
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb' }));
 // 初始化 Redis（使用 REDIS_URL）
 (0, redisConfig_1.initializeRedisConfig)();
 // 认证路由
@@ -71,7 +66,7 @@ app.post('/api/ai/analyze-video', auth_2.optionalAuth, upload_1.upload.single('v
 // 任务查询
 app.get('/api/ai/task/:taskId', auth_2.optionalAuth, getTaskStatus_1.getTaskStatusHandler);
 app.get('/api/tasks/:taskId', auth_2.optionalAuth, getTaskStatus_1.getTaskStatusHandler);
-// 健康检查
+// 健康检查（改成使用 REDIS_URL）
 app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
@@ -104,12 +99,12 @@ const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n✅ 后端服务运行在端口 ${PORT}`);
     console.log(`📍 API 基础 URL: http://0.0.0.0:${PORT}`);
     console.log(`🔄 Redis URL: ${process.env.REDIS_URL}`);
-    console.log(`🌍 CORS 允许源: ${allowedOrigins.join(', ')}`);
+    console.log(`🌍 CORS 允许源: ${process.env.VITE_BACKEND_URL || 'localhost'}`);
     console.log(`📊 诊断接口: GET http://localhost:${PORT}/api/diagnostics`);
     (0, diagnostics_1.startPeriodicCleanup)(600000);
     setInterval(() => {
         const memory = process.memoryUsage();
-        console.log(`📊 内存: ${(memory.heapUsed / 1024 / 1024).toFixed(2)}MB / ${(memory.heapTotal / 1024 / 1024).toFixed(2)}MB (文件缓冲数: ${upload_1.fileBuffers.size})`);
+        console.log(`📊 内存: ${(memory.heapUsed / 1024 / 1024).toFixed(2)}MB / ${(memory.heapTotal / 1024 / 1024).toFixed(2)}MB (文件缓冲数: ${upload_2.fileBuffers.size})`);
     }, 30000);
 });
 // 优雅关闭
