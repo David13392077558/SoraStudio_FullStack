@@ -28,34 +28,38 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-
-  // Vercel 正式域名
-  'https://sorastudio-frontend-v2.vercel.app',
-
-  // Vercel Git 分支预览域名
-  'https://sorastudio-frontend-v2-git-main-davids-projects-d041d44b.vercel.app',
-
-  // 当前部署使用的域名
-  'https://sorastudio-frontend-v2-by2abzpca-davids-projects-d041d44b.vercel.app',
-
-  // 新增的 Vercel preview 域名
-  'https://sorastudio-frontend-v2-722dtknsx-davids-projects-d041d44b.vercel.app',
+  'https://sorastudio-frontend-v2.vercel.app', // 正式环境
 ];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // 允许无 Origin 的请求（如 Postman、服务器内部调用）
-    if (!origin) return callback(null, true);
+const corsOptions: cors.CorsOptions = {
+  origin(origin, callback) {
+    // Postman / curl / 无 Origin 的情况
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // 明确允许的固定域名
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    console.warn('❌ 拒绝的 CORS 来源:', origin);
+
+    // 自动放行所有本项目的 Vercel preview 域名
+    const vercelPreviewPattern =
+      /^https:\/\/sorastudio-frontend-v2-[a-z0-9-]+\.davids-projects-d041d44b\.vercel\.app$/;
+
+    if (vercelPreviewPattern.test(origin)) {
+      return callback(null, true);
+    }
+
+    console.error('❌ 拒绝的 CORS 来源:', origin);
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
-}));
+};
+
+app.use(cors(corsOptions));
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb' }));

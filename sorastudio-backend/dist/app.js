@@ -15,58 +15,66 @@ const upload_1 = require("./middleware/upload");
 const auth_2 = require("./middleware/auth");
 const redisConfig_1 = require("./utils/redisConfig");
 const diagnostics_1 = require("./utils/diagnostics");
-const upload_2 = require("./middleware/upload");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
-// 中间件
-app.use(cors({
-    origin: [
-        'http://localhost:5173',
-        'http://localhost:3000',
-
-        // Vercel 正式域名
-        'https://sorastudio-frontend-v2.vercel.app',
-
-        // Vercel Git 分支预览域名
-        'https://sorastudio-frontend-v2-git-main-davids-projects-d041d44b.vercel.app',
-
-        // Vercel 自动生成的部署域名
-        'https://sorastudio-frontend-v2-by2abzpca-davids-projects-d041d44b.vercel.app'
-    ],
+// 中间件 - CORS
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://sorastudio-frontend-v2.vercel.app', // 正式环境
+];
+const corsOptions = {
+    origin(origin, callback) {
+        // Postman / curl / 无 Origin 的情况
+        if (!origin) {
+            return callback(null, true);
+        }
+        // 明确允许的固定域名
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        // 自动放行所有本项目的 Vercel preview 域名
+        const vercelPreviewPattern = /^https:\/\/sorastudio-frontend-v2-[a-z0-9-]+\.davids-projects-d041d44b\.vercel\.app$/;
+        if (vercelPreviewPattern.test(origin)) {
+            return callback(null, true);
+        }
+        console.error('❌ 拒绝的 CORS 来源:', origin);
+        return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb' }));
+};
+app.use((0, cors_1.default)(corsOptions));
+app.use(express_1.default.json({ limit: '50mb' }));
+app.use(express_1.default.urlencoded({ limit: '50mb' }));
 // 初始化 Redis（使用 REDIS_URL）
 (0, redisConfig_1.initializeRedisConfig)();
 // 认证路由
-app.post('/api/auth/register', auth_1.registerHandler);
-app.post('/api/auth/login', auth_1.loginHandler);
+app.post('/auth/register', auth_1.registerHandler);
+app.post('/auth/login', auth_1.loginHandler);
 // 需要认证的路由
-app.get('/api/auth/profile', auth_2.authenticateToken, auth_1.getProfileHandler);
-app.put('/api/auth/profile', auth_2.authenticateToken, auth_1.updateProfileHandler);
-app.put('/api/auth/change-password', auth_2.authenticateToken, auth_1.changePasswordHandler);
+app.get('/auth/profile', auth_2.authenticateToken, auth_1.getProfileHandler);
+app.put('/auth/profile', auth_2.authenticateToken, auth_1.updateProfileHandler);
+app.put('/auth/change-password', auth_2.authenticateToken, auth_1.changePasswordHandler);
 // 项目管理路由
-app.post('/api/projects', auth_2.authenticateToken, auth_1.createProjectHandler);
-app.get('/api/projects', auth_2.authenticateToken, auth_1.getUserProjectsHandler);
-app.put('/api/projects/:projectId', auth_2.authenticateToken, auth_1.updateProjectHandler);
-app.delete('/api/projects/:projectId', auth_2.authenticateToken, auth_1.deleteProjectHandler);
+app.post('/projects', auth_2.authenticateToken, auth_1.createProjectHandler);
+app.get('/projects', auth_2.authenticateToken, auth_1.getUserProjectsHandler);
+app.put('/projects/:projectId', auth_2.authenticateToken, auth_1.updateProjectHandler);
+app.delete('/projects/:projectId', auth_2.authenticateToken, auth_1.deleteProjectHandler);
 // AI 功能路由
-app.post('/api/ai/generate-prompt', auth_2.optionalAuth, upload_1.upload.fields([
+app.post('/ai/generate-prompt', auth_2.optionalAuth, upload_1.upload.fields([
     { name: 'image', maxCount: 1 },
     { name: 'video', maxCount: 1 }
 ]), upload_1.handleMulterError, generatePrompt_1.generatePromptHandler);
-app.post('/api/ai/generate-script', auth_2.optionalAuth, upload_1.upload.fields([
+app.post('/ai/generate-script', auth_2.optionalAuth, upload_1.upload.fields([
     { name: 'productImage', maxCount: 1 }
 ]), upload_1.handleMulterError, generateScript_1.generateScriptHandler);
-app.post('/api/ai/analyze-video', auth_2.optionalAuth, upload_1.upload.single('video'), upload_1.handleMulterError, analyzeVideo_1.analyzeVideoHandler);
+app.post('/ai/analyze-video', auth_2.optionalAuth, upload_1.upload.single('video'), upload_1.handleMulterError, analyzeVideo_1.analyzeVideoHandler);
 // 任务查询
-app.get('/api/ai/task/:taskId', auth_2.optionalAuth, getTaskStatus_1.getTaskStatusHandler);
-app.get('/api/tasks/:taskId', auth_2.optionalAuth, getTaskStatus_1.getTaskStatusHandler);
-// 健康检查（改成使用 REDIS_URL）
+app.get('/ai/task/:taskId', auth_2.optionalAuth, getTaskStatus_1.getTaskStatusHandler);
+app.get('/tasks/:taskId', auth_2.optionalAuth, getTaskStatus_1.getTaskStatusHandler);
+// 健康检查
 app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
@@ -79,7 +87,7 @@ app.get('/health', (req, res) => {
     });
 });
 // 诊断接口
-app.get('/api/diagnostics', diagnostics_1.diagnosticHandler);
+app.get('/diagnostics', diagnostics_1.diagnosticHandler);
 // 全局错误处理
 app.use((error, req, res, next) => {
     console.error('❌ 未处理的错误:', {
@@ -99,12 +107,12 @@ const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n✅ 后端服务运行在端口 ${PORT}`);
     console.log(`📍 API 基础 URL: http://0.0.0.0:${PORT}`);
     console.log(`🔄 Redis URL: ${process.env.REDIS_URL}`);
-    console.log(`🌍 CORS 允许源: ${process.env.VITE_BACKEND_URL || 'localhost'}`);
-    console.log(`📊 诊断接口: GET http://localhost:${PORT}/api/diagnostics`);
+    console.log(`🌍 CORS 允许源: ${allowedOrigins.join(', ')}`);
+    console.log(`📊 诊断接口: GET http://localhost:${PORT}/diagnostics`);
     (0, diagnostics_1.startPeriodicCleanup)(600000);
     setInterval(() => {
         const memory = process.memoryUsage();
-        console.log(`📊 内存: ${(memory.heapUsed / 1024 / 1024).toFixed(2)}MB / ${(memory.heapTotal / 1024 / 1024).toFixed(2)}MB (文件缓冲数: ${upload_2.fileBuffers.size})`);
+        console.log(`📊 内存: ${(memory.heapUsed / 1024 / 1024).toFixed(2)}MB / ${(memory.heapTotal / 1024 / 1024).toFixed(2)}MB (文件缓冲数: ${upload_1.fileBuffers.size})`);
     }, 30000);
 });
 // 优雅关闭
