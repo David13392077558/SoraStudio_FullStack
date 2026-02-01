@@ -6,7 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
-// BullMQ 已迁移到外部 Python Worker，移除 bullmq 相关代码
 const generatePrompt_1 = require("./handlers/generatePrompt");
 const generateScript_1 = require("./handlers/generateScript");
 const analyzeVideo_1 = require("./handlers/analyzeVideo");
@@ -28,17 +27,9 @@ app.use((0, cors_1.default)({
 }));
 app.use(express_1.default.json({ limit: '50mb' }));
 app.use(express_1.default.urlencoded({ limit: '50mb' }));
-// 初始化 Redis 配置
+// 初始化 Redis（使用 REDIS_URL）
 (0, redisConfig_1.initializeRedisConfig)();
-// 任务队列配置
-const redisConfig = {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD,
-    tls: process.env.REDIS_TLS === 'true' ? {} : undefined,
-};
-// 任务由 Python Worker 轮询 Redis 处理，后端不再创建 BullMQ 队列
-// 认证路由（公开）
+// 认证路由
 app.post('/api/auth/register', auth_1.registerHandler);
 app.post('/api/auth/login', auth_1.loginHandler);
 // 需要认证的路由
@@ -50,7 +41,7 @@ app.post('/api/projects', auth_2.authenticateToken, auth_1.createProjectHandler)
 app.get('/api/projects', auth_2.authenticateToken, auth_1.getUserProjectsHandler);
 app.put('/api/projects/:projectId', auth_2.authenticateToken, auth_1.updateProjectHandler);
 app.delete('/api/projects/:projectId', auth_2.authenticateToken, auth_1.deleteProjectHandler);
-// AI功能路由（可选认证）
+// AI 功能路由
 app.post('/api/ai/generate-prompt', auth_2.optionalAuth, upload_1.upload.fields([
     { name: 'image', maxCount: 1 },
     { name: 'video', maxCount: 1 }
@@ -59,29 +50,23 @@ app.post('/api/ai/generate-script', auth_2.optionalAuth, upload_1.upload.fields(
     { name: 'productImage', maxCount: 1 }
 ]), upload_1.handleMulterError, generateScript_1.generateScriptHandler);
 app.post('/api/ai/analyze-video', auth_2.optionalAuth, upload_1.upload.single('video'), upload_1.handleMulterError, analyzeVideo_1.analyzeVideoHandler);
-// 兼容旧路径与新的 AI 任务查询路径
+// 任务查询
 app.get('/api/ai/task/:taskId', auth_2.optionalAuth, getTaskStatus_1.getTaskStatusHandler);
 app.get('/api/tasks/:taskId', auth_2.optionalAuth, getTaskStatus_1.getTaskStatusHandler);
-// 健康检查
+// 健康检查（改成使用 REDIS_URL）
 app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
         version: '1.0.0',
         redis: {
-            host: process.env.REDIS_HOST || 'localhost',
-            port: process.env.REDIS_PORT || '6379',
+            url: process.env.REDIS_URL,
+            tls: process.env.REDIS_TLS
         }
     });
 });
-// 诊断路由 (仅开发/调试)
-app.get('/api/diagnostics', (req, res) => {
-    // 可选：添加认证检查
-    // if (!req.query.token || req.query.token !== process.env.DIAGNOSTIC_TOKEN) {
-    //   return res.status(401).json({ error: '未授权' });
-    // }
-    (0, diagnostics_1.diagnosticHandler)(req, res);
-});
+// 诊断接口
+app.get('/api/diagnostics', diagnostics_1.diagnosticHandler);
 // 全局错误处理
 app.use((error, req, res, next) => {
     console.error('❌ 未处理的错误:', {
@@ -100,12 +85,10 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n✅ 后端服务运行在端口 ${PORT}`);
     console.log(`📍 API 基础 URL: http://0.0.0.0:${PORT}`);
-    console.log(`🔄 Redis 配置: ${redisConfig.host}:${redisConfig.port}`);
+    console.log(`🔄 Redis URL: ${process.env.REDIS_URL}`);
     console.log(`🌍 CORS 允许源: ${process.env.VITE_BACKEND_URL || 'localhost'}`);
     console.log(`📊 诊断接口: GET http://localhost:${PORT}/api/diagnostics`);
-    // 启动定期清理任务
-    (0, diagnostics_1.startPeriodicCleanup)(600000); // 10分钟清理一次
-    // 监控内存使用
+    (0, diagnostics_1.startPeriodicCleanup)(600000);
     setInterval(() => {
         const memory = process.memoryUsage();
         console.log(`📊 内存: ${(memory.heapUsed / 1024 / 1024).toFixed(2)}MB / ${(memory.heapTotal / 1024 / 1024).toFixed(2)}MB (文件缓冲数: ${upload_2.fileBuffers.size})`);
@@ -113,7 +96,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 });
 // 优雅关闭
 process.on('SIGTERM', () => {
-    console.log('⚠️  收到 SIGTERM，开始优雅关闭...');
+    console.log('⚠️ 收到 SIGTERM，开始优雅关闭...');
     server.close(() => {
         console.log('✅ 服务已关闭');
         process.exit(0);
