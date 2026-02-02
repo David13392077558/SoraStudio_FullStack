@@ -33,30 +33,27 @@ const allowedOrigins = [
 
 const corsOptions: cors.CorsOptions = {
   origin(origin, callback) {
-    // Postman / curl / 无 Origin 的情况
-    if (!origin) {
-      return callback(null, true);
-    }
+    if (!origin) return callback(null, true);
 
-    // 明确允许的固定域名
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
 
-    // 自动放行所有本项目的 Vercel preview 域名
-    const vercelPreviewPattern =
-      /^https:\/\/sorastudio-frontend-v2-[a-z0-9-]+\.davids-projects-d041d44b\.vercel\.app$/;
+    const isVercelPreview =
+      origin.includes('sorastudio-frontend-v2') &&
+      origin.endsWith('.vercel.app');
 
-    if (vercelPreviewPattern.test(origin)) {
+    if (isVercelPreview) {
       return callback(null, true);
     }
 
     console.error('❌ 拒绝的 CORS 来源:', origin);
     return callback(new Error('Not allowed by CORS'));
   },
+
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
 app.use(cors(corsOptions));
@@ -115,6 +112,7 @@ app.post(
 // 任务查询
 app.get('/ai/task/:taskId', optionalAuth, getTaskStatusHandler);
 app.get('/tasks/:taskId', optionalAuth, getTaskStatusHandler);
+app.get('/ks/:taskId', optionalAuth, getTaskStatusHandler);
 
 // 健康检查
 app.get('/health', (req, res) => {

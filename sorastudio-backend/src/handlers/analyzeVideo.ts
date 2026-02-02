@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import redisClient from '../utils/redisClient';
 import { v4 as uuidv4 } from 'uuid';
-import { fileBuffers } from '../middleware/upload';
+import fs from 'fs';
+import path from 'path';
 
 export const analyzeVideoHandler = async (req: Request, res: Response) => {
   try {
@@ -14,24 +15,20 @@ export const analyzeVideoHandler = async (req: Request, res: Response) => {
     const taskId = uuidv4();
     const fileId = `${taskId}-video`;
 
-    // 将文件 Buffer 存储到内存中
-    fileBuffers.set(fileId, {
-      buffer: videoFile.buffer,
-      mimetype: videoFile.mimetype,
-      originalname: videoFile.originalname
-    });
+    // ⭐ 将视频保存到 /tmp（Render 和 Linux 都支持）
+    const tempPath = path.join('/tmp', `${fileId}.mp4`);
+    fs.writeFileSync(tempPath, videoFile.buffer);
 
-    // 构建统一任务对象并写入 Redis
+    // ⭐ 构建 worker 能识别的任务对象
     const task = {
       task_id: taskId,
       type: 'video_analysis',
-      payload: {
-        fileId,
-        originalname: videoFile.originalname,
-        size: videoFile.size
-      }
-    } as any;
+      video_path: tempPath, // ⭐ 关键字段
+      originalname: videoFile.originalname,
+      size: videoFile.size
+    };
 
+    // ⭐ 写入 Redis，让 worker 读取
     await redisClient.set(
       `pending_task:${taskId}`,
       JSON.stringify(task),
