@@ -15,26 +15,28 @@ export const analyzeVideoHandler = async (req: Request, res: Response) => {
     const taskId = uuidv4();
     const fileId = `${taskId}-video`;
 
-    // ⭐ 将视频保存到 /tmp（Render 和 Linux 都支持）
+    // 将视频保存到 /tmp（Render 支持）
     const tempPath = path.join('/tmp', `${fileId}.mp4`);
     fs.writeFileSync(tempPath, videoFile.buffer);
 
-    // ⭐ 构建 worker 能识别的任务对象
+    // 构建 worker 能识别的任务对象
     const task = {
       task_id: taskId,
       type: 'video_analysis',
-      video_path: tempPath, // ⭐ 关键字段
+      video_path: tempPath,
       originalname: videoFile.originalname,
       size: videoFile.size
     };
 
-    // ⭐ 写入 Redis，让 worker 读取
+    // ⭐ 正确写法：写入 pending_task，让 worker 能读取
     await redisClient.set(
       `pending_task:${taskId}`,
       JSON.stringify(task),
       'EX',
       3600
     );
+
+    console.log(`任务已写入 Redis: pending_task:${taskId}`);
 
     res.json({
       taskId,
