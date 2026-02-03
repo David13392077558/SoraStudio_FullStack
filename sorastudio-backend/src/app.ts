@@ -110,6 +110,8 @@ app.post(
 );
 
 // 任务查询
+// 任务查询
+app.get('/ai/task-status/:taskId', optionalAuth, getTaskStatusHandler);  // ← 新增这一行
 app.get('/ai/task/:taskId', optionalAuth, getTaskStatusHandler);
 app.get('/tasks/:taskId', optionalAuth, getTaskStatusHandler);
 app.get('/ks/:taskId', optionalAuth, getTaskStatusHandler);
