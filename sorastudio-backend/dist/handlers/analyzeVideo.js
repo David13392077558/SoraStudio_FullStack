@@ -1,37 +1,29 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.analyzeVideoHandler = void 0;
-const redisClient_1 = __importDefault(require("../utils/redisClient"));
-const uuid_1 = require("uuid");
-const upload_1 = require("../middleware/upload");
-const analyzeVideoHandler = async (req, res) => {
+import redisClient from '../utils/redisClient';
+import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+import path from 'path';
+export const analyzeVideoHandler = async (req, res) => {
     try {
         const videoFile = req.file;
         if (!videoFile) {
             return res.status(400).json({ error: '请上传视频文件' });
         }
-        const taskId = (0, uuid_1.v4)();
+        const taskId = uuidv4();
         const fileId = `${taskId}-video`;
-        // 将文件 Buffer 存储到内存中
-        upload_1.fileBuffers.set(fileId, {
-            buffer: videoFile.buffer,
-            mimetype: videoFile.mimetype,
-            originalname: videoFile.originalname
-        });
-        // 构建统一任务对象并写入 Redis
+        // 将视频保存到 /tmp（Render 支持）
+        const tempPath = path.join('/tmp', `${fileId}.mp4`);
+        fs.writeFileSync(tempPath, videoFile.buffer);
+        // 构建 worker 能识别的任务对象
         const task = {
             task_id: taskId,
             type: 'video_analysis',
-            payload: {
-                fileId,
-                originalname: videoFile.originalname,
-                size: videoFile.size
-            }
+            video_path: tempPath,
+            originalname: videoFile.originalname,
+            size: videoFile.size
         };
-        await redisClient_1.default.set(`pending_task:${taskId}`, JSON.stringify(task), 'EX', 3600);
+        // ⭐ 正确写法：写入 pending_task，让 worker 能读取
+        await redisClient.set(`pending_task:${taskId}`, JSON.stringify(task), 'EX', 3600);
+        console.log(`任务已写入 Redis: pending_task:${taskId}`);
         res.json({
             taskId,
             message: '视频分析任务已提交',
@@ -48,4 +40,3 @@ const analyzeVideoHandler = async (req, res) => {
         res.status(500).json({ error: '服务器内部错误' });
     }
 };
-exports.analyzeVideoHandler = analyzeVideoHandler;

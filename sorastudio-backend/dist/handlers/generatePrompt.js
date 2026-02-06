@@ -1,13 +1,7 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.generatePromptHandler = void 0;
-const redisClient_1 = __importDefault(require("../utils/redisClient"));
-const uuid_1 = require("uuid");
-const upload_1 = require("../middleware/upload");
-const generatePromptHandler = async (req, res) => {
+import redisClient from '../utils/redisClient';
+import { v4 as uuidv4 } from 'uuid';
+import { fileBuffers } from '../middleware/upload';
+export const generatePromptHandler = async (req, res) => {
     try {
         const { style, description } = req.body;
         const mReq = req;
@@ -19,7 +13,7 @@ const generatePromptHandler = async (req, res) => {
         if (!imageFile && !videoFile) {
             return res.status(400).json({ error: '请上传图片或视频文件' });
         }
-        const taskId = (0, uuid_1.v4)();
+        const taskId = uuidv4();
         // 用于传递给 worker 的统一任务对象（遵循 task schema）
         const task = {
             task_id: taskId,
@@ -32,7 +26,7 @@ const generatePromptHandler = async (req, res) => {
         // 处理图片
         if (imageFile) {
             const imageFileId = `${taskId}-image`;
-            upload_1.fileBuffers.set(imageFileId, {
+            fileBuffers.set(imageFileId, {
                 buffer: imageFile.buffer,
                 mimetype: imageFile.mimetype,
                 originalname: imageFile.originalname
@@ -47,7 +41,7 @@ const generatePromptHandler = async (req, res) => {
         // 处理视频
         if (videoFile) {
             const videoFileId = `${taskId}-video`;
-            upload_1.fileBuffers.set(videoFileId, {
+            fileBuffers.set(videoFileId, {
                 buffer: videoFile.buffer,
                 mimetype: videoFile.mimetype,
                 originalname: videoFile.originalname
@@ -60,7 +54,7 @@ const generatePromptHandler = async (req, res) => {
             };
         }
         // 写入 Redis 作为待处理任务
-        await redisClient_1.default.set(`pending_task:${taskId}`, JSON.stringify(task), 'EX', 3600);
+        await redisClient.set(`pending_task:${taskId}`, JSON.stringify(task), 'EX', 3600);
         res.json({
             taskId,
             message: '提示词生成任务已提交',
@@ -73,4 +67,3 @@ const generatePromptHandler = async (req, res) => {
         res.status(500).json({ error: '服务器内部错误' });
     }
 };
-exports.generatePromptHandler = generatePromptHandler;

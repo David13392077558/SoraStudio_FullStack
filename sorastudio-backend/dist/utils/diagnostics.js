@@ -1,9 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.diagnosticHandler = diagnosticHandler;
-exports.startPeriodicCleanup = startPeriodicCleanup;
 // 诊断接口：返回系统状态
-function diagnosticHandler(req, res) {
+export function diagnosticHandler(req, res) {
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
@@ -11,7 +7,7 @@ function diagnosticHandler(req, res) {
     });
 }
 // 定期清理任务：接受间隔时间（毫秒）
-function startPeriodicCleanup(interval) {
+export function startPeriodicCleanup(interval) {
     console.log(`🧹 定期清理任务已启动，每 ${interval / 1000} 秒执行一次`);
     setInterval(() => {
         console.log(`🧹 执行清理任务: ${new Date().toISOString()}`);

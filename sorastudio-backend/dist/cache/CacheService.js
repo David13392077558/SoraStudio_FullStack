@@ -1,10 +1,7 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.cacheService = exports.CacheService = void 0;
-const redisClient_1 = require("../utils/redisClient");
-class CacheService {
+import { redisClient } from "../utils/redisClient";
+export class CacheService {
     constructor() {
-        this.redis = redisClient_1.redisClient;
+        this.redis = redisClient;
         this.defaultTTL = 3600; // 1小时
         this.redis.on("error", (error) => {
             console.error("Redis cache error:", error);
@@ -132,6 +129,5 @@ class CacheService {
         await this.redis.quit();
     }
 }
-exports.CacheService = CacheService;
 // 全局缓存服务实例
-exports.cacheService = new CacheService();
+export const cacheService = new CacheService();
