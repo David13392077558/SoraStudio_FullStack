@@ -26,17 +26,15 @@ router.post("/upload", upload.single("file"), async (req: Request, res: Response
     // 上传到 R2
     const url = await uploadToR2(file.buffer, filename);
 
-    const task = {
+    // ⭐ 正确写法：平铺写入 Redis，而不是 data: JSON.stringify(...)
+    await redis.hset(`task:${id}`, {
       id,
       status: "queued",
       videoUrl: url,
-      result: null,
+      result: "",
       createdAt: Date.now(),
       updatedAt: Date.now()
-    };
-
-    // 写入 Redis（任务数据）
-    await redis.hset(`task:${id}`, "data", JSON.stringify(task));
+    });
 
     // 推入任务队列
     await redis.rpush("tasks:queue", id);
