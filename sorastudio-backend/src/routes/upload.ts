@@ -1,5 +1,3 @@
-// src/routes/upload.ts
-
 import express, { Request, Response } from "express";
 import multer from "multer";
 import { uploadToR2 } from "../services/r2";
@@ -23,12 +21,11 @@ router.post("/upload", upload.single("file"), async (req: Request, res: Response
     const id = uuid();
     const filename = `${id}.mp4`;
 
-    // 上传到 R2
     const url = await uploadToR2(file.buffer, filename);
 
-    // ⭐ 正确写法：平铺写入 Redis，而不是 data: JSON.stringify(...)
     await redis.hset(`task:${id}`, {
       id,
+      type: "video_analysis",
       status: "queued",
       videoUrl: url,
       result: "",
@@ -36,7 +33,6 @@ router.post("/upload", upload.single("file"), async (req: Request, res: Response
       updatedAt: Date.now()
     });
 
-    // 推入任务队列
     await redis.rpush("tasks:queue", id);
 
     res.json({
