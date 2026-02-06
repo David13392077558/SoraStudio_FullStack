@@ -1,5 +1,8 @@
-import { GeminiAdapter } from './GeminiAdapter';
-export class ModelManager {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.modelManager = exports.ModelManager = void 0;
+const GeminiAdapter_1 = require("./GeminiAdapter");
+class ModelManager {
     constructor() {
         this.models = new Map();
         this.initializeModels();
@@ -13,7 +16,7 @@ export class ModelManager {
             maxTokens: 2048,
         };
         if (geminiConfig.apiKey) {
-            this.models.set('gemini', new GeminiAdapter(geminiConfig));
+            this.models.set('gemini', new GeminiAdapter_1.GeminiAdapter(geminiConfig));
         }
         // 这里可以添加其他模型
         // OpenAI Sora (当可用时)
@@ -52,5 +55,6 @@ export class ModelManager {
         }
     }
 }
+exports.ModelManager = ModelManager;
 // 全局模型管理器实例
-export const modelManager = new ModelManager();
+exports.modelManager = new ModelManager();

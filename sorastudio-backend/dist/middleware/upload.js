@@ -1,10 +1,16 @@
-import multer from 'multer';
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.handleMulterError = exports.upload = exports.limits = exports.fileFilter = exports.fileBuffers = void 0;
+const multer_1 = __importDefault(require("multer"));
 // 文件类型验证
 const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const allowedVideoTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/wmv', 'video/flv'];
 // 内存存储 Buffer Map (用于在 Render 等容器环境中)
-export const fileBuffers = new Map();
-export const fileFilter = (req, file, cb) => {
+exports.fileBuffers = new Map();
+const fileFilter = (req, file, cb) => {
     const fieldName = file.fieldname;
     if (fieldName === 'image' || fieldName === 'productImage') {
         if (allowedImageTypes.includes(file.mimetype)) {
@@ -26,10 +32,11 @@ export const fileFilter = (req, file, cb) => {
         cb(new Error('未知的文件字段'));
     }
 };
+exports.fileFilter = fileFilter;
 // 文件大小限制
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500MB
-export const limits = {
+exports.limits = {
     fileSize: (req, file, cb) => {
         const fieldName = file.fieldname;
         if (fieldName === 'image' || fieldName === 'productImage') {
@@ -54,19 +61,19 @@ export const limits = {
     }
 };
 // 使用内存存储替代磁盘存储 (适合容器环境)
-const storage = multer.memoryStorage();
+const storage = multer_1.default.memoryStorage();
 // 创建multer实例
-export const upload = multer({
+exports.upload = (0, multer_1.default)({
     storage,
-    fileFilter,
+    fileFilter: exports.fileFilter,
     limits: {
         fileSize: MAX_VIDEO_SIZE, // 使用最大的限制
         files: 2, // 最多2个文件
     }
 });
 // 错误处理中间件
-export const handleMulterError = (error, req, res, next) => {
-    if (error instanceof multer.MulterError) {
+const handleMulterError = (error, req, res, next) => {
+    if (error instanceof multer_1.default.MulterError) {
         if (error.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).json({
                 error: '文件大小超过限制',
@@ -88,3 +95,4 @@ export const handleMulterError = (error, req, res, next) => {
     }
     next(error);
 };
+exports.handleMulterError = handleMulterError;

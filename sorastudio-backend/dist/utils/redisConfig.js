@@ -1,4 +1,7 @@
+"use strict";
 // src/utils/redisConfig.ts
-export function initializeRedisConfig() {
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.initializeRedisConfig = initializeRedisConfig;
+function initializeRedisConfig() {
     console.log("Redis config initialized");
 }

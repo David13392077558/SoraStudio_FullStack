@@ -1,8 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ProjectModel = exports.UserModel = void 0;
 // 内存存储（生产环境应该使用数据库）
 const users = new Map();
 const projects = new Map();
 // 用户相关操作
-export const UserModel = {
+exports.UserModel = {
     create(userData) {
         const user = {
             ...userData,
@@ -38,7 +41,7 @@ export const UserModel = {
     }
 };
 // 项目相关操作
-export const ProjectModel = {
+exports.ProjectModel = {
     create(projectData) {
         const project = {
             ...projectData,

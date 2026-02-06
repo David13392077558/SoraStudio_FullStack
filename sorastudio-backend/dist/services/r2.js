@@ -1,5 +1,9 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-export const r2 = new S3Client({
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.r2 = void 0;
+exports.uploadToR2 = uploadToR2;
+const client_s3_1 = require("@aws-sdk/client-s3");
+exports.r2 = new client_s3_1.S3Client({
     region: "auto",
     endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
     credentials: {
@@ -7,13 +11,13 @@ export const r2 = new S3Client({
         secretAccessKey: process.env.R2_SECRET_KEY,
     },
 });
-export async function uploadToR2(buffer, filename, contentType = "video/mp4") {
-    const command = new PutObjectCommand({
+async function uploadToR2(buffer, filename, contentType = "video/mp4") {
+    const command = new client_s3_1.PutObjectCommand({
         Bucket: process.env.R2_BUCKET,
         Key: filename,
         Body: buffer,
         ContentType: contentType,
     });
-    await r2.send(command);
+    await exports.r2.send(command);
     return `https://pub-${process.env.R2_ACCOUNT_ID}.r2.dev/${filename}`;
 }

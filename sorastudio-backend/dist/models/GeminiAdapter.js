@@ -1,11 +1,47 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import * as fs from 'fs';
-import * as path from 'path';
-import { getFileBuffer, bufferToTempFile, cleanupTempFile, cleanupFileBuffer } from '../utils/fileManager';
-export class GeminiAdapter {
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.GeminiAdapter = void 0;
+const generative_ai_1 = require("@google/generative-ai");
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
+const fileManager_1 = require("../utils/fileManager");
+class GeminiAdapter {
     constructor(config) {
         this.config = config;
-        this.genAI = new GoogleGenerativeAI(config.apiKey);
+        this.genAI = new generative_ai_1.GoogleGenerativeAI(config.apiKey);
         this.model = this.genAI.getGenerativeModel({
             model: config.modelName || 'gemini-pro-vision',
             generationConfig: {
@@ -26,7 +62,7 @@ export class GeminiAdapter {
             const imageFileId = request.imageFileId;
             const imagePath = request.imagePath;
             if (imageFileId) {
-                const imageBuffer = getFileBuffer(imageFileId);
+                const imageBuffer = (0, fileManager_1.getFileBuffer)(imageFileId);
                 if (imageBuffer) {
                     const imagePart = {
                         inlineData: {
@@ -36,7 +72,7 @@ export class GeminiAdapter {
                     };
                     const fullPrompt = [{ text: prompt }, imagePart];
                     result = await this.model.generateContent(fullPrompt);
-                    cleanupFileBuffer(imageFileId);
+                    (0, fileManager_1.cleanupFileBuffer)(imageFileId);
                 }
                 else {
                     result = await this.model.generateContent(prompt);
@@ -82,7 +118,7 @@ export class GeminiAdapter {
             const imageFileId = request.productImageFileId;
             const productImagePath = request.productImagePath;
             if (imageFileId) {
-                const imageBuffer = getFileBuffer(imageFileId);
+                const imageBuffer = (0, fileManager_1.getFileBuffer)(imageFileId);
                 if (imageBuffer) {
                     const imagePart = {
                         inlineData: {
@@ -94,7 +130,7 @@ export class GeminiAdapter {
                     const result = await this.model.generateContent(fullPrompt);
                     const response = await result.response;
                     const script = response.text();
-                    cleanupFileBuffer(imageFileId);
+                    (0, fileManager_1.cleanupFileBuffer)(imageFileId);
                     return {
                         script,
                         highlights: this.extractHighlights(script),
@@ -153,7 +189,7 @@ export class GeminiAdapter {
             let tempFilePath = null;
             try {
                 if (videoFileId) {
-                    tempFilePath = await bufferToTempFile(videoFileId);
+                    tempFilePath = await (0, fileManager_1.bufferToTempFile)(videoFileId);
                     if (!tempFilePath)
                         throw new Error('无法从内存中获取视频文件');
                 }
@@ -187,7 +223,7 @@ export class GeminiAdapter {
                 const analysis = response.text();
                 const parsedResult = this.parseVideoAnalysis(analysis);
                 if (videoFileId)
-                    cleanupFileBuffer(videoFileId);
+                    (0, fileManager_1.cleanupFileBuffer)(videoFileId);
                 return {
                     ...parsedResult,
                     metadata: {
@@ -198,7 +234,7 @@ export class GeminiAdapter {
             }
             finally {
                 if (tempFilePath)
-                    cleanupTempFile(tempFilePath);
+                    (0, fileManager_1.cleanupTempFile)(tempFilePath);
             }
         }
         catch (error) {
@@ -239,3 +275,4 @@ export class GeminiAdapter {
         };
     }
 }
+exports.GeminiAdapter = GeminiAdapter;

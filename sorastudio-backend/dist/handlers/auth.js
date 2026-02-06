@@ -1,22 +1,28 @@
-import bcrypt from 'bcryptjs';
-import { UserModel, ProjectModel } from '../models/User';
-import { generateToken } from '../middleware/auth';
-import { cacheService } from '../cache/CacheService';
-export const registerHandler = async (req, res) => {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.changePasswordHandler = exports.deleteProjectHandler = exports.updateProjectHandler = exports.getUserProjectsHandler = exports.createProjectHandler = exports.updateProfileHandler = exports.getProfileHandler = exports.loginHandler = exports.registerHandler = void 0;
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
+const User_1 = require("../models/User");
+const auth_1 = require("../middleware/auth");
+const CacheService_1 = require("../cache/CacheService");
+const registerHandler = async (req, res) => {
     try {
         const { email, password, name } = req.body;
         if (!email || !password || !name) {
             return res.status(400).json({ error: '邮箱、密码和姓名都是必填项' });
         }
         // 检查邮箱是否已存在
-        const existingUser = UserModel.findByEmail(email);
+        const existingUser = User_1.UserModel.findByEmail(email);
         if (existingUser) {
             return res.status(409).json({ error: '邮箱已被注册' });
         }
         // 加密密码
-        const hashedPassword = await bcrypt.hash(password, 12);
+        const hashedPassword = await bcryptjs_1.default.hash(password, 12);
         // 创建用户
-        const user = UserModel.create({
+        const user = User_1.UserModel.create({
             email,
             password: hashedPassword,
             name,
@@ -24,13 +30,13 @@ export const registerHandler = async (req, res) => {
             isActive: true,
         });
         // 生成令牌
-        const token = generateToken({
+        const token = (0, auth_1.generateToken)({
             id: user.id,
             email: user.email,
             role: user.role
         });
         // 缓存用户信息
-        await cacheService.set(`user:${user.id}`, {
+        await CacheService_1.cacheService.set(`user:${user.id}`, {
             id: user.id,
             email: user.email,
             name: user.name,
@@ -52,32 +58,33 @@ export const registerHandler = async (req, res) => {
         res.status(500).json({ error: '服务器内部错误' });
     }
 };
-export const loginHandler = async (req, res) => {
+exports.registerHandler = registerHandler;
+const loginHandler = async (req, res) => {
     try {
         const { email, password } = req.body;
         if (!email || !password) {
             return res.status(400).json({ error: '邮箱和密码都是必填项' });
         }
         // 查找用户
-        const user = UserModel.findByEmail(email);
+        const user = User_1.UserModel.findByEmail(email);
         if (!user || !user.isActive) {
             return res.status(401).json({ error: '邮箱或密码错误' });
         }
         // 验证密码
-        const isValidPassword = await bcrypt.compare(password, user.password);
+        const isValidPassword = await bcryptjs_1.default.compare(password, user.password);
         if (!isValidPassword) {
             return res.status(401).json({ error: '邮箱或密码错误' });
         }
         // 更新最后登录时间
-        UserModel.update(user.id, { lastLoginAt: new Date() });
+        User_1.UserModel.update(user.id, { lastLoginAt: new Date() });
         // 生成令牌
-        const token = generateToken({
+        const token = (0, auth_1.generateToken)({
             id: user.id,
             email: user.email,
             role: user.role
         });
         // 缓存用户信息
-        await cacheService.set(`user:${user.id}`, {
+        await CacheService_1.cacheService.set(`user:${user.id}`, {
             id: user.id,
             email: user.email,
             name: user.name,
@@ -99,17 +106,18 @@ export const loginHandler = async (req, res) => {
         res.status(500).json({ error: '服务器内部错误' });
     }
 };
-export const getProfileHandler = async (req, res) => {
+exports.loginHandler = loginHandler;
+const getProfileHandler = async (req, res) => {
     try {
         if (!req.user) {
             return res.status(401).json({ error: '未认证' });
         }
-        const user = UserModel.findById(req.user.id);
+        const user = User_1.UserModel.findById(req.user.id);
         if (!user) {
             return res.status(404).json({ error: '用户不存在' });
         }
         // 获取用户统计信息
-        const projects = ProjectModel.findByUserId(req.user.id);
+        const projects = User_1.ProjectModel.findByUserId(req.user.id);
         const completedProjects = projects.filter(p => p.status === 'completed');
         res.json({
             id: user.id,
@@ -130,7 +138,8 @@ export const getProfileHandler = async (req, res) => {
         res.status(500).json({ error: '服务器内部错误' });
     }
 };
-export const updateProfileHandler = async (req, res) => {
+exports.getProfileHandler = getProfileHandler;
+const updateProfileHandler = async (req, res) => {
     try {
         if (!req.user) {
             return res.status(401).json({ error: '未认证' });
@@ -147,17 +156,17 @@ export const updateProfileHandler = async (req, res) => {
             updates.bio = bio;
         // 检查邮箱是否已被其他用户使用
         if (email) {
-            const existingUser = UserModel.findByEmail(email);
+            const existingUser = User_1.UserModel.findByEmail(email);
             if (existingUser && existingUser.id !== req.user.id) {
                 return res.status(409).json({ error: '邮箱已被其他用户使用' });
             }
         }
-        const user = UserModel.update(req.user.id, updates);
+        const user = User_1.UserModel.update(req.user.id, updates);
         if (!user) {
             return res.status(404).json({ error: '用户不存在' });
         }
         // 更新缓存
-        await cacheService.set(`user:${user.id}`, {
+        await CacheService_1.cacheService.set(`user:${user.id}`, {
             id: user.id,
             email: user.email,
             name: user.name,
@@ -179,8 +188,9 @@ export const updateProfileHandler = async (req, res) => {
         res.status(500).json({ error: '服务器内部错误' });
     }
 };
+exports.updateProfileHandler = updateProfileHandler;
 // 项目管理处理器
-export const createProjectHandler = async (req, res) => {
+const createProjectHandler = async (req, res) => {
     try {
         if (!req.user) {
             return res.status(401).json({ error: '未认证' });
@@ -189,7 +199,7 @@ export const createProjectHandler = async (req, res) => {
         if (!name || !type) {
             return res.status(400).json({ error: '项目名称和类型都是必填项' });
         }
-        const project = ProjectModel.create({
+        const project = User_1.ProjectModel.create({
             userId: req.user.id,
             name,
             type,
@@ -207,13 +217,14 @@ export const createProjectHandler = async (req, res) => {
         res.status(500).json({ error: '服务器内部错误' });
     }
 };
-export const getUserProjectsHandler = async (req, res) => {
+exports.createProjectHandler = createProjectHandler;
+const getUserProjectsHandler = async (req, res) => {
     try {
         if (!req.user) {
             return res.status(401).json({ error: '未认证' });
         }
         const { type, search } = req.query;
-        let projects = ProjectModel.findByUserId(req.user.id);
+        let projects = User_1.ProjectModel.findByUserId(req.user.id);
         // 按类型过滤
         if (type) {
             projects = projects.filter(p => p.type === type);
@@ -232,14 +243,15 @@ export const getUserProjectsHandler = async (req, res) => {
         res.status(500).json({ error: '服务器内部错误' });
     }
 };
-export const updateProjectHandler = async (req, res) => {
+exports.getUserProjectsHandler = getUserProjectsHandler;
+const updateProjectHandler = async (req, res) => {
     try {
         if (!req.user) {
             return res.status(401).json({ error: '未认证' });
         }
         const { projectId } = req.params;
         const { name, data, status, tags } = req.body;
-        const project = ProjectModel.findById(projectId);
+        const project = User_1.ProjectModel.findById(projectId);
         if (!project || project.userId !== req.user.id) {
             return res.status(404).json({ error: '项目不存在或无权限访问' });
         }
@@ -252,7 +264,7 @@ export const updateProjectHandler = async (req, res) => {
             updates.status = status;
         if (tags)
             updates.tags = tags;
-        const updatedProject = ProjectModel.update(projectId, updates);
+        const updatedProject = User_1.ProjectModel.update(projectId, updates);
         if (!updatedProject) {
             return res.status(500).json({ error: '更新项目失败' });
         }
@@ -266,17 +278,18 @@ export const updateProjectHandler = async (req, res) => {
         res.status(500).json({ error: '服务器内部错误' });
     }
 };
-export const deleteProjectHandler = async (req, res) => {
+exports.updateProjectHandler = updateProjectHandler;
+const deleteProjectHandler = async (req, res) => {
     try {
         if (!req.user) {
             return res.status(401).json({ error: '未认证' });
         }
         const { projectId } = req.params;
-        const project = ProjectModel.findById(projectId);
+        const project = User_1.ProjectModel.findById(projectId);
         if (!project || project.userId !== req.user.id) {
             return res.status(404).json({ error: '项目不存在或无权限访问' });
         }
-        const deleted = ProjectModel.delete(projectId);
+        const deleted = User_1.ProjectModel.delete(projectId);
         if (!deleted) {
             return res.status(500).json({ error: '删除项目失败' });
         }
@@ -287,7 +300,8 @@ export const deleteProjectHandler = async (req, res) => {
         res.status(500).json({ error: '服务器内部错误' });
     }
 };
-export const changePasswordHandler = async (req, res) => {
+exports.deleteProjectHandler = deleteProjectHandler;
+const changePasswordHandler = async (req, res) => {
     try {
         if (!req.user) {
             return res.status(401).json({ error: '未认证' });
@@ -299,19 +313,19 @@ export const changePasswordHandler = async (req, res) => {
         if (newPassword.length < 6) {
             return res.status(400).json({ error: '新密码至少需要6个字符' });
         }
-        const user = UserModel.findById(req.user.id);
+        const user = User_1.UserModel.findById(req.user.id);
         if (!user) {
             return res.status(404).json({ error: '用户不存在' });
         }
         // 验证当前密码
-        const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+        const isValidPassword = await bcryptjs_1.default.compare(currentPassword, user.password);
         if (!isValidPassword) {
             return res.status(400).json({ error: '当前密码不正确' });
         }
         // 加密新密码
-        const hashedNewPassword = await bcrypt.hash(newPassword, 12);
+        const hashedNewPassword = await bcryptjs_1.default.hash(newPassword, 12);
         // 更新密码
-        const updatedUser = UserModel.update(req.user.id, { password: hashedNewPassword });
+        const updatedUser = User_1.UserModel.update(req.user.id, { password: hashedNewPassword });
         if (!updatedUser) {
             return res.status(500).json({ error: '密码更新失败' });
         }
@@ -322,3 +336,4 @@ export const changePasswordHandler = async (req, res) => {
         res.status(500).json({ error: '服务器内部错误' });
     }
 };
+exports.changePasswordHandler = changePasswordHandler;

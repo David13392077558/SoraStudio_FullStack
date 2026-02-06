@@ -1,4 +1,7 @@
-export const TaskSchema = {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.TaskSchema = void 0;
+exports.TaskSchema = {
     type: 'object',
     required: ['task_id', 'type', 'payload'],
     properties: {

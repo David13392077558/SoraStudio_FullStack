@@ -1,11 +1,17 @@
-import jwt from 'jsonwebtoken';
-export const authenticateToken = (req, res, next) => {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.requireAdmin = exports.generateToken = exports.optionalAuth = exports.authenticateToken = void 0;
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
     if (!token) {
         return res.status(401).json({ error: '访问令牌缺失' });
     }
-    jwt.verify(token, process.env.JWT_SECRET || 'default_secret', (err, user) => {
+    jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET || 'default_secret', (err, user) => {
         if (err) {
             return res.status(403).json({ error: '无效的访问令牌' });
         }
@@ -13,12 +19,13 @@ export const authenticateToken = (req, res, next) => {
         next();
     });
 };
+exports.authenticateToken = authenticateToken;
 // 可选认证中间件（用于公开接口）
-export const optionalAuth = (req, res, next) => {
+const optionalAuth = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
     if (token) {
-        jwt.verify(token, process.env.JWT_SECRET || 'default_secret', (err, user) => {
+        jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET || 'default_secret', (err, user) => {
             if (!err) {
                 req.user = user;
             }
@@ -29,14 +36,16 @@ export const optionalAuth = (req, res, next) => {
         next();
     }
 };
+exports.optionalAuth = optionalAuth;
 // 生成JWT令牌
-export const generateToken = (payload) => {
-    return jwt.sign(payload, process.env.JWT_SECRET || 'default_secret', {
+const generateToken = (payload) => {
+    return jsonwebtoken_1.default.sign(payload, process.env.JWT_SECRET || 'default_secret', {
         expiresIn: '7d' // 7天过期
     });
 };
+exports.generateToken = generateToken;
 // 验证管理员权限
-export const requireAdmin = (req, res, next) => {
+const requireAdmin = (req, res, next) => {
     if (!req.user) {
         return res.status(401).json({ error: '未认证' });
     }
@@ -45,3 +54,4 @@ export const requireAdmin = (req, res, next) => {
     }
     next();
 };
+exports.requireAdmin = requireAdmin;

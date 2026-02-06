@@ -1,10 +1,15 @@
-import express from "express";
-import multer from "multer";
-import { uploadToR2 } from "../services/r2";
-import { redis } from "../services/redis";
-import { v4 as uuid } from "uuid";
-const router = express.Router();
-const upload = multer();
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const multer_1 = __importDefault(require("multer"));
+const r2_1 = require("../services/r2");
+const redis_1 = require("../services/redis");
+const uuid_1 = require("uuid");
+const router = express_1.default.Router();
+const upload = (0, multer_1.default)();
 router.post("/upload", upload.single("file"), async (req, res) => {
     const file = req.file;
     if (!file) {
@@ -14,9 +19,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
         });
     }
     try {
-        const id = uuid();
+        const id = (0, uuid_1.v4)();
         const filename = `${id}.mp4`;
-        const url = await uploadToR2(file.buffer, filename);
+        const url = await (0, r2_1.uploadToR2)(file.buffer, filename);
         const task = {
             id,
             status: "queued",
@@ -26,11 +31,11 @@ router.post("/upload", upload.single("file"), async (req, res) => {
             updatedAt: Date.now(),
         };
         // ⭐ 将任务序列化成 JSON 存入 Redis（避免 TS 类型错误）
-        await redis.hSet(`task:${id}`, {
+        await redis_1.redis.hSet(`task:${id}`, {
             data: JSON.stringify(task)
         });
         // 推入任务队列
-        await redis.rPush("tasks:queue", id);
+        await redis_1.redis.rPush("tasks:queue", id);
         res.json({ success: true, taskId: id, videoUrl: url });
     }
     catch (err) {
@@ -38,4 +43,4 @@ router.post("/upload", upload.single("file"), async (req, res) => {
         res.status(500).json({ success: false });
     }
 });
-export default router;
+exports.default = router;

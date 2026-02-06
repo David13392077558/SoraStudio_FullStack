@@ -1,10 +1,14 @@
-import { createClient } from "redis";
-export const redis = createClient({
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.redis = void 0;
+exports.initRedis = initRedis;
+const redis_1 = require("redis");
+exports.redis = (0, redis_1.createClient)({
     url: process.env.REDIS_URL,
 });
-redis.on("error", (err) => console.error("Redis Error:", err));
-export async function initRedis() {
-    if (!redis.isOpen) {
-        await redis.connect();
+exports.redis.on("error", (err) => console.error("Redis Error:", err));
+async function initRedis() {
+    if (!exports.redis.isOpen) {
+        await exports.redis.connect();
     }
 }

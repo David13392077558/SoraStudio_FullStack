@@ -1,18 +1,23 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import uploadRouter from "./routes/upload";
-import { generatePromptHandler } from "./handlers/generatePrompt";
-import { generateScriptHandler } from "./handlers/generateScript";
-import { analyzeVideoHandler } from "./handlers/analyzeVideo";
-import { getTaskStatusHandler } from "./handlers/getTaskStatus";
-import { registerHandler, loginHandler, getProfileHandler, updateProfileHandler, createProjectHandler, getUserProjectsHandler, updateProjectHandler, deleteProjectHandler, changePasswordHandler } from "./handlers/auth";
-import { upload, handleMulterError } from "./middleware/upload";
-import { authenticateToken, optionalAuth } from "./middleware/auth";
-import { initializeRedisConfig } from "./utils/redisConfig";
-import { diagnosticHandler, startPeriodicCleanup } from "./utils/diagnostics";
-dotenv.config();
-const app = express();
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const cors_1 = __importDefault(require("cors"));
+const dotenv_1 = __importDefault(require("dotenv"));
+const upload_1 = __importDefault(require("./routes/upload"));
+const generatePrompt_1 = require("./handlers/generatePrompt");
+const generateScript_1 = require("./handlers/generateScript");
+const analyzeVideo_1 = require("./handlers/analyzeVideo");
+const getTaskStatus_1 = require("./handlers/getTaskStatus");
+const auth_1 = require("./handlers/auth");
+const upload_2 = require("./middleware/upload");
+const auth_2 = require("./middleware/auth");
+const redisConfig_1 = require("./utils/redisConfig");
+const diagnostics_1 = require("./utils/diagnostics");
+dotenv_1.default.config();
+const app = (0, express_1.default)();
 // CORS
 const allowedOrigins = [
     "http://localhost:5173",
@@ -33,37 +38,37 @@ const corsOptions = {
     },
     credentials: true,
 };
-app.use(cors(corsOptions));
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb" }));
+app.use((0, cors_1.default)(corsOptions));
+app.use(express_1.default.json({ limit: "50mb" }));
+app.use(express_1.default.urlencoded({ limit: "50mb" }));
 // 初始化 Redis
-initializeRedisConfig();
+(0, redisConfig_1.initializeRedisConfig)();
 // Auth
-app.post("/auth/register", registerHandler);
-app.post("/auth/login", loginHandler);
-app.get("/auth/profile", authenticateToken, getProfileHandler);
-app.put("/auth/profile", authenticateToken, updateProfileHandler);
-app.put("/auth/change-password", authenticateToken, changePasswordHandler);
+app.post("/auth/register", auth_1.registerHandler);
+app.post("/auth/login", auth_1.loginHandler);
+app.get("/auth/profile", auth_2.authenticateToken, auth_1.getProfileHandler);
+app.put("/auth/profile", auth_2.authenticateToken, auth_1.updateProfileHandler);
+app.put("/auth/change-password", auth_2.authenticateToken, auth_1.changePasswordHandler);
 // Projects
-app.post("/projects", authenticateToken, createProjectHandler);
-app.get("/projects", authenticateToken, getUserProjectsHandler);
-app.put("/projects/:projectId", authenticateToken, updateProjectHandler);
-app.delete("/projects/:projectId", authenticateToken, deleteProjectHandler);
+app.post("/projects", auth_2.authenticateToken, auth_1.createProjectHandler);
+app.get("/projects", auth_2.authenticateToken, auth_1.getUserProjectsHandler);
+app.put("/projects/:projectId", auth_2.authenticateToken, auth_1.updateProjectHandler);
+app.delete("/projects/:projectId", auth_2.authenticateToken, auth_1.deleteProjectHandler);
 // AI
-app.post("/ai/generate-prompt", optionalAuth, upload.fields([{ name: "image" }, { name: "video" }]), handleMulterError, generatePromptHandler);
-app.post("/ai/generate-script", optionalAuth, upload.fields([{ name: "productImage" }]), handleMulterError, generateScriptHandler);
-app.post("/ai/analyze-video", optionalAuth, upload.single("video"), handleMulterError, analyzeVideoHandler);
+app.post("/ai/generate-prompt", auth_2.optionalAuth, upload_2.upload.fields([{ name: "image" }, { name: "video" }]), upload_2.handleMulterError, generatePrompt_1.generatePromptHandler);
+app.post("/ai/generate-script", auth_2.optionalAuth, upload_2.upload.fields([{ name: "productImage" }]), upload_2.handleMulterError, generateScript_1.generateScriptHandler);
+app.post("/ai/analyze-video", auth_2.optionalAuth, upload_2.upload.single("video"), upload_2.handleMulterError, analyzeVideo_1.analyzeVideoHandler);
 // ⭐ 挂载 /api/upload
-app.use("/api", uploadRouter);
+app.use("/api", upload_1.default);
 // 任务查询
-app.get("/ai/task-status/:taskId", optionalAuth, getTaskStatusHandler);
-app.get("/ai/task/:taskId", optionalAuth, getTaskStatusHandler);
+app.get("/ai/task-status/:taskId", auth_2.optionalAuth, getTaskStatus_1.getTaskStatusHandler);
+app.get("/ai/task/:taskId", auth_2.optionalAuth, getTaskStatus_1.getTaskStatusHandler);
 // 健康检查
 app.get("/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 // 诊断接口
-app.get("/diagnostics", diagnosticHandler);
+app.get("/diagnostics", diagnostics_1.diagnosticHandler);
 // 全局错误处理
 app.use((error, req, res, next) => {
     console.error("❌ 未处理的错误:", error);
@@ -73,7 +78,7 @@ app.use((error, req, res, next) => {
 const PORT = Number(process.env.PORT) || 3000;
 const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`\n✅ 后端服务运行在端口 ${PORT}`);
-    startPeriodicCleanup(600000);
+    (0, diagnostics_1.startPeriodicCleanup)(600000);
 });
 // 优雅关闭
 process.on("SIGTERM", () => {
