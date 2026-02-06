@@ -23,5 +23,6 @@ export async function uploadToR2(
 
   await r2.send(command);
 
-  return `https://pub-${process.env.R2_ACCOUNT_ID}.r2.dev/${filename}`;
+  // ⭐ 使用正确的 Public URL，而不是手动拼接
+  return `${process.env.R2_PUBLIC_URL}/${filename}`;
 }
