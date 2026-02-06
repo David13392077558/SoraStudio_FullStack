@@ -1,24 +1,26 @@
 "use strict";
+// src/handlers/generateScript.ts
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateScriptHandler = void 0;
-const redisClient_1 = __importDefault(require("../utils/redisClient"));
+const redis_1 = __importDefault(require("../services/redis"));
 const uuid_1 = require("uuid");
 const upload_1 = require("../middleware/upload");
 const generateScriptHandler = async (req, res) => {
     try {
         const { productUrl, productDescription, style } = req.body;
         const mReq = req;
-        const productImageFile = mReq.files?.['productImage']?.[0];
+        const productImageFile = mReq.files?.["productImage"]?.[0];
         if (!productDescription || !style) {
-            return res.status(400).json({ error: '产品描述和风格参数必填' });
+            return res.status(400).json({ error: "产品描述和风格参数必填" });
         }
         const taskId = (0, uuid_1.v4)();
+        // Worker 能识别的任务对象
         const task = {
             task_id: taskId,
-            type: 'generate_script',
+            type: "generate_script",
             payload: {
                 productUrl,
                 productDescription,
@@ -40,17 +42,18 @@ const generateScriptHandler = async (req, res) => {
                 mimetype: productImageFile.mimetype
             };
         }
-        await redisClient_1.default.set(`pending_task:${taskId}`, JSON.stringify(task), 'EX', 3600);
+        // 写入 Redis（pending_task）
+        await redis_1.default.set(`pending_task:${taskId}`, JSON.stringify(task), "EX", 3600);
         res.json({
             taskId,
-            message: '脚本生成任务已提交',
-            status: 'queued',
+            message: "脚本生成任务已提交",
+            status: "queued",
             fileInfo: task.payload.imageInfo
         });
     }
     catch (error) {
-        console.error('生成脚本失败:', error);
-        res.status(500).json({ error: '服务器内部错误' });
+        console.error("生成脚本失败:", error);
+        res.status(500).json({ error: "服务器内部错误" });
     }
 };
 exports.generateScriptHandler = generateScriptHandler;

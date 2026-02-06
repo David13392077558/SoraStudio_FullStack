@@ -1,32 +1,33 @@
 "use strict";
+// src/handlers/generatePrompt.ts
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generatePromptHandler = void 0;
-const redisClient_1 = __importDefault(require("../utils/redisClient"));
+const redis_1 = __importDefault(require("../services/redis"));
 const uuid_1 = require("uuid");
 const upload_1 = require("../middleware/upload");
 const generatePromptHandler = async (req, res) => {
     try {
         const { style, description } = req.body;
         const mReq = req;
-        const imageFile = mReq.files?.['image']?.[0];
-        const videoFile = mReq.files?.['video']?.[0];
+        const imageFile = mReq.files?.["image"]?.[0];
+        const videoFile = mReq.files?.["video"]?.[0];
         if (!style) {
-            return res.status(400).json({ error: '风格参数必填' });
+            return res.status(400).json({ error: "风格参数必填" });
         }
         if (!imageFile && !videoFile) {
-            return res.status(400).json({ error: '请上传图片或视频文件' });
+            return res.status(400).json({ error: "请上传图片或视频文件" });
         }
         const taskId = (0, uuid_1.v4)();
-        // 用于传递给 worker 的统一任务对象（遵循 task schema）
+        // Worker 能识别的任务对象
         const task = {
             task_id: taskId,
-            type: 'video_generation',
+            type: "video_generation",
             payload: {
                 style,
-                description,
+                description
             }
         };
         // 处理图片
@@ -59,18 +60,18 @@ const generatePromptHandler = async (req, res) => {
                 mimetype: videoFile.mimetype
             };
         }
-        // 写入 Redis 作为待处理任务
-        await redisClient_1.default.set(`pending_task:${taskId}`, JSON.stringify(task), 'EX', 3600);
+        // 写入 Redis（pending_task）
+        await redis_1.default.set(`pending_task:${taskId}`, JSON.stringify(task), "EX", 3600);
         res.json({
             taskId,
-            message: '提示词生成任务已提交',
-            status: 'queued',
+            message: "提示词生成任务已提交",
+            status: "queued",
             fileInfo: task.payload.imageInfo || task.payload.videoInfo
         });
     }
     catch (error) {
-        console.error('生成提示词失败:', error);
-        res.status(500).json({ error: '服务器内部错误' });
+        console.error("生成提示词失败:", error);
+        res.status(500).json({ error: "服务器内部错误" });
     }
 };
 exports.generatePromptHandler = generatePromptHandler;

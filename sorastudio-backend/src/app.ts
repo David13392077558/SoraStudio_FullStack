@@ -1,3 +1,5 @@
+// src/app.ts
+
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -21,10 +23,10 @@ import {
   changePasswordHandler
 } from "./handlers/auth";
 
-import { upload, handleMulterError, fileBuffers } from "./middleware/upload";
+import { upload, handleMulterError } from "./middleware/upload";
 import { authenticateToken, optionalAuth } from "./middleware/auth";
 
-import { initializeRedisConfig } from "./utils/redisConfig";
+import redis from "./services/redis";   // ⭐ 使用统一 Redis 客户端
 import { diagnosticHandler, startPeriodicCleanup } from "./utils/diagnostics";
 
 dotenv.config();
@@ -59,8 +61,9 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb" }));
 
-// 初始化 Redis
-initializeRedisConfig();
+// ⭐ 不再需要 initializeRedisConfig()
+// ioredis 会自动连接
+redis.on("connect", () => console.log("Redis connected from app.ts"));
 
 // Auth
 app.post("/auth/register", registerHandler);
@@ -100,7 +103,7 @@ app.post(
   analyzeVideoHandler
 );
 
-// ⭐ 挂载 /api/upload
+// 上传接口
 app.use("/api", uploadRouter);
 
 // 任务查询

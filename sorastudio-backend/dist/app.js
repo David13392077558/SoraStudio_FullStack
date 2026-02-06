@@ -1,4 +1,5 @@
 "use strict";
+// src/app.ts
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -14,7 +15,7 @@ const getTaskStatus_1 = require("./handlers/getTaskStatus");
 const auth_1 = require("./handlers/auth");
 const upload_2 = require("./middleware/upload");
 const auth_2 = require("./middleware/auth");
-const redisConfig_1 = require("./utils/redisConfig");
+const redis_1 = __importDefault(require("./services/redis")); // ⭐ 使用统一 Redis 客户端
 const diagnostics_1 = require("./utils/diagnostics");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -41,8 +42,9 @@ const corsOptions = {
 app.use((0, cors_1.default)(corsOptions));
 app.use(express_1.default.json({ limit: "50mb" }));
 app.use(express_1.default.urlencoded({ limit: "50mb" }));
-// 初始化 Redis
-(0, redisConfig_1.initializeRedisConfig)();
+// ⭐ 不再需要 initializeRedisConfig()
+// ioredis 会自动连接
+redis_1.default.on("connect", () => console.log("Redis connected from app.ts"));
 // Auth
 app.post("/auth/register", auth_1.registerHandler);
 app.post("/auth/login", auth_1.loginHandler);
@@ -58,7 +60,7 @@ app.delete("/projects/:projectId", auth_2.authenticateToken, auth_1.deleteProjec
 app.post("/ai/generate-prompt", auth_2.optionalAuth, upload_2.upload.fields([{ name: "image" }, { name: "video" }]), upload_2.handleMulterError, generatePrompt_1.generatePromptHandler);
 app.post("/ai/generate-script", auth_2.optionalAuth, upload_2.upload.fields([{ name: "productImage" }]), upload_2.handleMulterError, generateScript_1.generateScriptHandler);
 app.post("/ai/analyze-video", auth_2.optionalAuth, upload_2.upload.single("video"), upload_2.handleMulterError, analyzeVideo_1.analyzeVideoHandler);
-// ⭐ 挂载 /api/upload
+// 上传接口
 app.use("/api", upload_1.default);
 // 任务查询
 app.get("/ai/task-status/:taskId", auth_2.optionalAuth, getTaskStatus_1.getTaskStatusHandler);

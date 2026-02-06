@@ -1,7 +1,9 @@
-import { Request, Response } from 'express';
-import redisClient from '../utils/redisClient';
-import { v4 as uuidv4 } from 'uuid';
-import { fileBuffers } from '../middleware/upload';
+// src/handlers/generateScript.ts
+
+import { Request, Response } from "express";
+import redis from "../services/redis";
+import { v4 as uuidv4 } from "uuid";
+import { fileBuffers } from "../middleware/upload";
 
 interface MulterRequest extends Request {
   files: {
@@ -14,17 +16,18 @@ export const generateScriptHandler = async (req: Request, res: Response) => {
     const { productUrl, productDescription, style } = req.body;
     const mReq = req as MulterRequest;
 
-    const productImageFile = mReq.files?.['productImage']?.[0];
+    const productImageFile = mReq.files?.["productImage"]?.[0];
 
     if (!productDescription || !style) {
-      return res.status(400).json({ error: '产品描述和风格参数必填' });
+      return res.status(400).json({ error: "产品描述和风格参数必填" });
     }
 
     const taskId = uuidv4();
 
+    // Worker 能识别的任务对象
     const task = {
       task_id: taskId,
-      type: 'generate_script',
+      type: "generate_script",
       payload: {
         productUrl,
         productDescription,
@@ -50,22 +53,22 @@ export const generateScriptHandler = async (req: Request, res: Response) => {
       };
     }
 
-    await redisClient.set(
+    // 写入 Redis（pending_task）
+    await redis.set(
       `pending_task:${taskId}`,
       JSON.stringify(task),
-      'EX',
+      "EX",
       3600
     );
 
     res.json({
       taskId,
-      message: '脚本生成任务已提交',
-      status: 'queued',
+      message: "脚本生成任务已提交",
+      status: "queued",
       fileInfo: task.payload.imageInfo
     });
-
   } catch (error: any) {
-    console.error('生成脚本失败:', error);
-    res.status(500).json({ error: '服务器内部错误' });
+    console.error("生成脚本失败:", error);
+    res.status(500).json({ error: "服务器内部错误" });
   }
 };

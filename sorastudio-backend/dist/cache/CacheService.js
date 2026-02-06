@@ -1,10 +1,14 @@
 "use strict";
+// src/cache/CacheService.ts
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.cacheService = exports.CacheService = void 0;
-const redisClient_1 = require("../utils/redisClient");
+const redis_1 = __importDefault(require("../services/redis"));
 class CacheService {
     constructor() {
-        this.redis = redisClient_1.redisClient;
+        this.redis = redis_1.default;
         this.defaultTTL = 3600; // 1小时
         this.redis.on("error", (error) => {
             console.error("Redis cache error:", error);
@@ -14,7 +18,7 @@ class CacheService {
     async set(key, value, ttl) {
         try {
             const serializedValue = JSON.stringify(value);
-            await this.redis.setex(key, ttl || this.defaultTTL, serializedValue);
+            await this.redis.set(key, serializedValue, "EX", ttl || this.defaultTTL);
         }
         catch (error) {
             console.error("Cache set error:", error);
@@ -50,7 +54,7 @@ class CacheService {
             console.error("Cache hset error:", error);
         }
     }
-    // 获取哈希缓存
+    // 获取哈希字段
     async hget(key, field) {
         try {
             const value = await this.redis.hget(key, field);
@@ -97,7 +101,7 @@ class CacheService {
             result,
             timestamp: new Date().toISOString(),
         };
-        const existingHistory = await this.get(historyKey) || [];
+        const existingHistory = (await this.get(historyKey)) || [];
         existingHistory.unshift(historyItem);
         if (existingHistory.length > 50) {
             existingHistory.splice(50);
@@ -106,7 +110,7 @@ class CacheService {
     }
     // 获取用户历史记录
     async getUserHistory(userId) {
-        return await this.get(`user:${userId}:history`) || [];
+        return (await this.get(`user:${userId}:history`)) || [];
     }
     // 缓存模型响应
     async cacheModelResponse(modelName, inputHash, response) {
@@ -118,7 +122,7 @@ class CacheService {
         const cacheKey = `model:${modelName}:${inputHash}`;
         return await this.get(cacheKey);
     }
-    // 清理过期缓存
+    // 清理过期缓存（占位）
     async cleanup() {
         try {
             console.log("Cache cleanup completed");
@@ -127,7 +131,7 @@ class CacheService {
             console.error("Cache cleanup error:", error);
         }
     }
-    // 关闭连接
+    // 关闭连接（一般不需要）
     async close() {
         await this.redis.quit();
     }

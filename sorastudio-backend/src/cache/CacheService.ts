@@ -1,11 +1,13 @@
-import { redisClient } from "../utils/redisClient";
+// src/cache/CacheService.ts
+
+import redis from "../services/redis";
 
 export class CacheService {
-  private redis = redisClient;
+  private redis = redis;
   private defaultTTL = 3600; // 1小时
 
   constructor() {
-    this.redis.on("error", (error) => {
+    this.redis.on("error", (error: any) => {
       console.error("Redis cache error:", error);
     });
   }
@@ -14,7 +16,7 @@ export class CacheService {
   async set(key: string, value: any, ttl?: number): Promise<void> {
     try {
       const serializedValue = JSON.stringify(value);
-      await this.redis.setex(key, ttl || this.defaultTTL, serializedValue);
+      await this.redis.set(key, serializedValue, "EX", ttl || this.defaultTTL);
     } catch (error) {
       console.error("Cache set error:", error);
     }
@@ -50,7 +52,7 @@ export class CacheService {
     }
   }
 
-  // 获取哈希缓存
+  // 获取哈希字段
   async hget<T = any>(key: string, field: string): Promise<T | null> {
     try {
       const value = await this.redis.hget(key, field);
@@ -66,13 +68,15 @@ export class CacheService {
     try {
       const result = await this.redis.hgetall(key);
       const parsed: Record<string, any> = {};
+
       for (const [field, value] of Object.entries(result)) {
         try {
-          parsed[field] = JSON.parse(value);
+          parsed[field] = JSON.parse(value as string);
         } catch {
           parsed[field] = value;
         }
       }
+
       return parsed;
     } catch (error) {
       console.error("Cache hgetall error:", error);
@@ -99,8 +103,9 @@ export class CacheService {
       timestamp: new Date().toISOString(),
     };
 
-    const existingHistory = await this.get(historyKey) || [];
+    const existingHistory = (await this.get(historyKey)) || [];
     existingHistory.unshift(historyItem);
+
     if (existingHistory.length > 50) {
       existingHistory.splice(50);
     }
@@ -110,7 +115,7 @@ export class CacheService {
 
   // 获取用户历史记录
   async getUserHistory(userId: string): Promise<any[]> {
-    return await this.get(`user:${userId}:history`) || [];
+    return (await this.get(`user:${userId}:history`)) || [];
   }
 
   // 缓存模型响应
@@ -125,7 +130,7 @@ export class CacheService {
     return await this.get(cacheKey);
   }
 
-  // 清理过期缓存
+  // 清理过期缓存（占位）
   async cleanup(): Promise<void> {
     try {
       console.log("Cache cleanup completed");
@@ -134,7 +139,7 @@ export class CacheService {
     }
   }
 
-  // 关闭连接
+  // 关闭连接（一般不需要）
   async close(): Promise<void> {
     await this.redis.quit();
   }
