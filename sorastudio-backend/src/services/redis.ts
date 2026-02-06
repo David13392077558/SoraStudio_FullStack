@@ -1,13 +1,16 @@
-import { createClient } from "redis";
+// src/services/redis.ts
+import Redis from "ioredis";
 
-export const redis = createClient({
-  url: process.env.REDIS_URL,
+const redis = new Redis(process.env.REDIS_URL!, {
+  tls: process.env.REDIS_TLS === "true" ? {} : undefined
 });
 
-redis.on("error", (err: any) => console.error("Redis Error:", err));
+redis.on("connect", () => {
+  console.log("Redis connected");
+});
 
-export async function initRedis() {
-  if (!redis.isOpen) {
-    await redis.connect();
-  }
-}
+redis.on("error", (err) => {
+  console.error("Redis error:", err);
+});
+
+export default redis;
