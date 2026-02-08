@@ -10,15 +10,21 @@ const router = express_1.default.Router();
 router.get("/task/:id", async (req, res) => {
     const id = req.params.id;
     try {
-        // 从 Redis 读取任务数据
-        const raw = await redis_1.default.hget(`task:${id}`, "data");
-        if (!raw) {
+        // 读取整个任务哈希
+        const task = await redis_1.default.hgetall(`task:${id}`);
+        if (!task || Object.keys(task).length === 0) {
             return res.status(404).json({
                 success: false,
                 message: "任务不存在"
             });
         }
-        const task = JSON.parse(raw);
+        // Redis 返回的都是字符串，需要处理 JSON 字段
+        if (task.result) {
+            try {
+                task.result = JSON.parse(task.result);
+            }
+            catch { }
+        }
         res.json({
             success: true,
             task

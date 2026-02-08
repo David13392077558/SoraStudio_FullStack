@@ -8,6 +8,7 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const upload_1 = __importDefault(require("./routes/upload"));
+const task_1 = __importDefault(require("./routes/task"));
 const generatePrompt_1 = require("./handlers/generatePrompt");
 const generateScript_1 = require("./handlers/generateScript");
 const analyzeVideo_1 = require("./handlers/analyzeVideo");
@@ -62,7 +63,8 @@ app.post("/ai/generate-script", auth_2.optionalAuth, upload_2.upload.fields([{ n
 app.post("/ai/analyze-video", auth_2.optionalAuth, upload_2.upload.single("video"), upload_2.handleMulterError, analyzeVideo_1.analyzeVideoHandler);
 // 上传接口
 app.use("/api", upload_1.default);
-// 任务查询
+// 任务查询（支持多种路径）
+app.use("/api", task_1.default); // 挂载到 /api/task/:id
 app.get("/ai/task-status/:taskId", auth_2.optionalAuth, getTaskStatus_1.getTaskStatusHandler);
 app.get("/ai/task/:taskId", auth_2.optionalAuth, getTaskStatus_1.getTaskStatusHandler);
 // 健康检查

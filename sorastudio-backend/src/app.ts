@@ -5,6 +5,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 import uploadRouter from "./routes/upload";
+import taskRouter from "./routes/task";
 
 import { generatePromptHandler } from "./handlers/generatePrompt";
 import { generateScriptHandler } from "./handlers/generateScript";
@@ -106,7 +107,8 @@ app.post(
 // 上传接口
 app.use("/api", uploadRouter);
 
-// 任务查询
+// 任务查询（支持多种路径）
+app.use("/api", taskRouter);  // 挂载到 /api/task/:id
 app.get("/ai/task-status/:taskId", optionalAuth, getTaskStatusHandler);
 app.get("/ai/task/:taskId", optionalAuth, getTaskStatusHandler);
 

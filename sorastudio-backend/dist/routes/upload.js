@@ -1,5 +1,4 @@
 "use strict";
-// src/routes/upload.ts
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -22,19 +21,16 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     try {
         const id = (0, uuid_1.v4)();
         const filename = `${id}.mp4`;
-        // 上传到 R2
         const url = await (0, r2_1.uploadToR2)(file.buffer, filename);
-        const task = {
+        await redis_1.default.hset(`task:${id}`, {
             id,
+            type: "video_analysis",
             status: "queued",
             videoUrl: url,
-            result: null,
+            result: "",
             createdAt: Date.now(),
             updatedAt: Date.now()
-        };
-        // 写入 Redis（任务数据）
-        await redis_1.default.hset(`task:${id}`, "data", JSON.stringify(task));
-        // 推入任务队列
+        });
         await redis_1.default.rpush("tasks:queue", id);
         res.json({
             success: true,
