@@ -9,17 +9,22 @@ router.get("/task/:id", async (req: Request, res: Response) => {
   const id = req.params.id;
 
   try {
-    // 从 Redis 读取任务数据
-    const raw = await redis.hget(`task:${id}`, "data");
+    // 读取整个任务哈希
+    const task = await redis.hgetall(`task:${id}`);
 
-    if (!raw) {
+    if (!task || Object.keys(task).length === 0) {
       return res.status(404).json({
         success: false,
         message: "任务不存在"
       });
     }
 
-    const task = JSON.parse(raw);
+    // Redis 返回的都是字符串，需要处理 JSON 字段
+    if (task.result) {
+      try {
+        task.result = JSON.parse(task.result);
+      } catch {}
+    }
 
     res.json({
       success: true,
