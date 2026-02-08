@@ -23,7 +23,11 @@ router.get("/task/:id", async (req: Request, res: Response) => {
     if (task.result) {
       try {
         task.result = JSON.parse(task.result);
-      } catch {}
+      } catch (parseError) {
+        console.error("❌ JSON.parse(result) 失败:", parseError);
+        console.error("原始 result 内容:", task.result);
+        // 保持原始字符串，让前端再尝试解析
+      }
     }
 
     res.json({
