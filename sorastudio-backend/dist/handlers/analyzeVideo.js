@@ -7,7 +7,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.analyzeVideoHandler = void 0;
 const redis_1 = __importDefault(require("../services/redis"));
 const uuid_1 = require("uuid");
-const r2_1 = require("../services/r2"); // ⭐ 正确路径在这里
+const r2_1 = require("../services/r2");
 const analyzeVideoHandler = async (req, res) => {
     try {
         const videoFile = req.file;
@@ -16,21 +16,19 @@ const analyzeVideoHandler = async (req, res) => {
         }
         const taskId = (0, uuid_1.v4)();
         const filename = `${taskId}.mp4`;
-        // ⭐ 上传到 R2，得到公网 URL
         const publicUrl = await (0, r2_1.uploadToR2)(videoFile.buffer, filename, videoFile.mimetype || "video/mp4");
-        // ⭐ Worker 能识别的任务对象
         const task = {
             id: taskId,
             type: "video_analysis",
-            videoUrl: publicUrl, // ⭐ 关键：公网 URL
+            videoUrl: publicUrl,
             createdAt: Date.now(),
             status: "queued",
         };
-        // 1. 写入 pending_task:{id}
-        await redis_1.default.hset(`pending_task:${taskId}`, task);
-        // 2. 推入队列
+        // ⭐ 正确写法：写入 task:<id>，类型为 STRING
+        await redis_1.default.set(`task:${taskId}`, JSON.stringify(task));
+        // 推入队列
         await redis_1.default.lpush("tasks:queue", taskId);
-        console.log(`任务已写入 Redis: pending_task:${taskId}`);
+        console.log(`任务已写入 Redis: task:${taskId}`);
         console.log(`任务已加入队列: tasks:queue -> ${taskId}`);
         res.json({
             taskId,

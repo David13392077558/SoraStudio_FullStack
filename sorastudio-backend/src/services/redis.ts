@@ -3,22 +3,13 @@ import Redis from "ioredis";
 
 const redisUrl = process.env.REDIS_URL!;
 
-// ⭐ Render 免费 Redis 最稳定配置（单连接）
 const redis = new Redis(redisUrl, {
   tls: redisUrl.startsWith("rediss://")
     ? { rejectUnauthorized: false }
     : undefined,
-
-  // ⭐ 禁用 readyCheck，避免额外连接
   enableReadyCheck: false,
-
-  // ⭐ 禁用 pipeline 重试，避免额外连接
   maxRetriesPerRequest: null,
-
-  // ⭐ 避免 ioredis 创建额外连接
   lazyConnect: false,
-
-  // ⭐ 避免频繁重连导致状态不一致
   retryStrategy: () => 2000,
   reconnectOnError: () => true
 });

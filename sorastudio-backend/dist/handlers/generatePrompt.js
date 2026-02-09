@@ -1,5 +1,4 @@
 "use strict";
-// src/handlers/generatePrompt.ts
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -7,71 +6,35 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.generatePromptHandler = void 0;
 const redis_1 = __importDefault(require("../services/redis"));
 const uuid_1 = require("uuid");
-const upload_1 = require("../middleware/upload");
 const generatePromptHandler = async (req, res) => {
     try {
         const { style, description } = req.body;
-        const mReq = req;
-        const imageFile = mReq.files?.["image"]?.[0];
-        const videoFile = mReq.files?.["video"]?.[0];
         if (!style) {
             return res.status(400).json({ error: "风格参数必填" });
         }
-        if (!imageFile && !videoFile) {
-            return res.status(400).json({ error: "请上传图片或视频文件" });
-        }
         const taskId = (0, uuid_1.v4)();
-        // Worker 能识别的任务对象
         const task = {
-            task_id: taskId,
-            type: "video_generation",
+            id: taskId,
+            type: "generate_prompt",
             payload: {
                 style,
-                description
-            }
+                description: description || "",
+            },
+            status: "queued",
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            result: null,
         };
-        // 处理图片
-        if (imageFile) {
-            const imageFileId = `${taskId}-image`;
-            upload_1.fileBuffers.set(imageFileId, {
-                buffer: imageFile.buffer,
-                mimetype: imageFile.mimetype,
-                originalname: imageFile.originalname
-            });
-            task.payload.imageFileId = imageFileId;
-            task.payload.imageInfo = {
-                originalname: imageFile.originalname,
-                size: imageFile.size,
-                mimetype: imageFile.mimetype
-            };
-        }
-        // 处理视频
-        if (videoFile) {
-            const videoFileId = `${taskId}-video`;
-            upload_1.fileBuffers.set(videoFileId, {
-                buffer: videoFile.buffer,
-                mimetype: videoFile.mimetype,
-                originalname: videoFile.originalname
-            });
-            task.payload.videoFileId = videoFileId;
-            task.payload.videoInfo = {
-                originalname: videoFile.originalname,
-                size: videoFile.size,
-                mimetype: videoFile.mimetype
-            };
-        }
-        // 写入 Redis（pending_task）
-        await redis_1.default.set(`pending_task:${taskId}`, JSON.stringify(task), "EX", 3600);
-        res.json({
+        await redis_1.default.set(`task:${taskId}`, JSON.stringify(task));
+        await redis_1.default.lpush("tasks:queue", taskId);
+        return res.json({
             taskId,
             message: "提示词生成任务已提交",
-            status: "queued",
-            fileInfo: task.payload.imageInfo || task.payload.videoInfo
         });
     }
-    catch (error) {
-        console.error("生成提示词失败:", error);
-        res.status(500).json({ error: "服务器内部错误" });
+    catch (err) {
+        console.error("generatePromptHandler error:", err);
+        return res.status(500).json({ error: "服务器内部错误" });
     }
 };
 exports.generatePromptHandler = generatePromptHandler;
