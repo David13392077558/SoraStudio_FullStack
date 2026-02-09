@@ -7,8 +7,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.analyzeVideoHandler = void 0;
 const redis_1 = __importDefault(require("../services/redis"));
 const uuid_1 = require("uuid");
-const fs_1 = __importDefault(require("fs"));
-const path_1 = __importDefault(require("path"));
+const r2_1 = require("../utils/r2"); // ⭐ 使用 R2 上传
 const analyzeVideoHandler = async (req, res) => {
     try {
         const videoFile = req.file;
@@ -16,32 +15,28 @@ const analyzeVideoHandler = async (req, res) => {
             return res.status(400).json({ error: "请上传视频文件" });
         }
         const taskId = (0, uuid_1.v4)();
-        const fileId = `${taskId}-video`;
-        // Render 支持 /tmp 作为临时存储
-        const tempPath = path_1.default.join("/tmp", `${fileId}.mp4`);
-        fs_1.default.writeFileSync(tempPath, videoFile.buffer);
-        // Worker 能识别的任务对象
+        const filename = `${taskId}.mp4`;
+        // ⭐ 上传到 R2，得到公网 URL
+        const publicUrl = await (0, r2_1.uploadToR2)(videoFile.buffer, filename, videoFile.mimetype || "video/mp4");
+        // ⭐ Worker 能识别的任务对象
         const task = {
-            task_id: taskId,
+            id: taskId,
             type: "video_analysis",
-            video_path: tempPath,
-            originalname: videoFile.originalname,
-            size: videoFile.size,
+            videoUrl: publicUrl, // ⭐ 关键：公网 URL
             createdAt: Date.now(),
-            status: "queued"
+            status: "queued",
         };
-        // 写入 Redis（pending_task）
-        await redis_1.default.set(`pending_task:${taskId}`, JSON.stringify(task), "EX", 3600);
+        // 1. 写入 pending_task:{id}
+        await redis_1.default.hset(`pending_task:${taskId}`, task);
+        // 2. 推入队列
+        await redis_1.default.lpush("tasks:queue", taskId);
         console.log(`任务已写入 Redis: pending_task:${taskId}`);
+        console.log(`任务已加入队列: tasks:queue -> ${taskId}`);
         res.json({
             taskId,
             message: "视频分析任务已提交",
             status: "queued",
-            fileInfo: {
-                originalname: videoFile.originalname,
-                size: videoFile.size,
-                mimetype: videoFile.mimetype
-            }
+            videoUrl: publicUrl,
         });
     }
     catch (error) {

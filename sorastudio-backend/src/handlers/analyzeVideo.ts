@@ -3,8 +3,7 @@
 import { Request, Response } from "express";
 import redis from "../services/redis";
 import { v4 as uuidv4 } from "uuid";
-import { uploadToR2 } from "../utils/r2";   // ⭐ 使用 R2 上传
-import path from "path";
+import { uploadToR2 } from "../services/r2";   // ⭐ 正确路径在这里
 
 export const analyzeVideoHandler = async (req: Request, res: Response) => {
   try {

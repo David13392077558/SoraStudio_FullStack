@@ -43,9 +43,11 @@ const corsOptions = {
 app.use((0, cors_1.default)(corsOptions));
 app.use(express_1.default.json({ limit: "50mb" }));
 app.use(express_1.default.urlencoded({ limit: "50mb" }));
-// ⭐ 不再需要 initializeRedisConfig()
-// ioredis 会自动连接
-redis_1.default.on("connect", () => console.log("Redis connected from app.ts"));
+// ⭐ 打印 Redis URL（关键）
+redis_1.default.on("connect", () => {
+    console.log("Redis connected from app.ts");
+    console.log("后端使用的 Redis URL:", process.env.REDIS_URL);
+});
 // Auth
 app.post("/auth/register", auth_1.registerHandler);
 app.post("/auth/login", auth_1.loginHandler);
@@ -64,7 +66,7 @@ app.post("/ai/analyze-video", auth_2.optionalAuth, upload_2.upload.single("video
 // 上传接口
 app.use("/api", upload_1.default);
 // 任务查询（支持多种路径）
-app.use("/api", task_1.default); // 挂载到 /api/task/:id
+app.use("/api", task_1.default);
 app.get("/ai/task-status/:taskId", auth_2.optionalAuth, getTaskStatus_1.getTaskStatusHandler);
 app.get("/ai/task/:taskId", auth_2.optionalAuth, getTaskStatus_1.getTaskStatusHandler);
 // 健康检查
