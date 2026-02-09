@@ -3,7 +3,7 @@
 import { Request, Response } from "express";
 import redis from "../services/redis";
 import { v4 as uuidv4 } from "uuid";
-import fs from "fs";
+import { uploadToR2 } from "../utils/r2";   // ⭐ 使用 R2 上传
 import path from "path";
 
 export const analyzeVideoHandler = async (req: Request, res: Response) => {
@@ -15,25 +15,28 @@ export const analyzeVideoHandler = async (req: Request, res: Response) => {
     }
 
     const taskId = uuidv4();
-    const fileId = `${taskId}-video`;
+    const filename = `${taskId}.mp4`;
 
-    // Render 支持 /tmp 作为临时存储
-    const tempPath = path.join("/tmp", `${fileId}.mp4`);
-    fs.writeFileSync(tempPath, videoFile.buffer);
+    // ⭐ 上传到 R2，得到公网 URL
+    const publicUrl = await uploadToR2(
+      videoFile.buffer,
+      filename,
+      videoFile.mimetype || "video/mp4"
+    );
 
-    // Worker 能识别的任务对象
+    // ⭐ Worker 能识别的任务对象
     const task = {
       id: taskId,
       type: "video_analysis",
-      videoUrl: tempPath,
+      videoUrl: publicUrl,     // ⭐ 关键：公网 URL
       createdAt: Date.now(),
-      status: "queued"
+      status: "queued",
     };
 
     // 1. 写入 pending_task:{id}
     await redis.hset(`pending_task:${taskId}`, task);
 
-    // 2. ⭐⭐ 推入队列（Worker 就能读到了）
+    // 2. 推入队列
     await redis.lpush("tasks:queue", taskId);
 
     console.log(`任务已写入 Redis: pending_task:${taskId}`);
@@ -42,7 +45,8 @@ export const analyzeVideoHandler = async (req: Request, res: Response) => {
     res.json({
       taskId,
       message: "视频分析任务已提交",
-      status: "queued"
+      status: "queued",
+      videoUrl: publicUrl,
     });
 
   } catch (error) {
