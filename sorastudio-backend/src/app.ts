@@ -62,9 +62,11 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb" }));
 
-// ⭐ 不再需要 initializeRedisConfig()
-// ioredis 会自动连接
-redis.on("connect", () => console.log("Redis connected from app.ts"));
+// ⭐ 打印 Redis URL（关键）
+redis.on("connect", () => {
+  console.log("Redis connected from app.ts");
+  console.log("后端使用的 Redis URL:", process.env.REDIS_URL);
+});
 
 // Auth
 app.post("/auth/register", registerHandler);
@@ -108,7 +110,7 @@ app.post(
 app.use("/api", uploadRouter);
 
 // 任务查询（支持多种路径）
-app.use("/api", taskRouter);  // 挂载到 /api/task/:id
+app.use("/api", taskRouter);
 app.get("/ai/task-status/:taskId", optionalAuth, getTaskStatusHandler);
 app.get("/ai/task/:taskId", optionalAuth, getTaskStatusHandler);
 
