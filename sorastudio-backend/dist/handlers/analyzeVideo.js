@@ -7,7 +7,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.analyzeVideoHandler = void 0;
 const redis_1 = __importDefault(require("../services/redis"));
 const uuid_1 = require("uuid");
-const r2_1 = require("../utils/r2"); // ⭐ 使用 R2 上传
+const r2_1 = require("../services/r2"); // ⭐ 正确路径在这里
 const analyzeVideoHandler = async (req, res) => {
     try {
         const videoFile = req.file;

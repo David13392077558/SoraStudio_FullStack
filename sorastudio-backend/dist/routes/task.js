@@ -7,27 +7,23 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const redis_1 = __importDefault(require("../services/redis"));
 const router = express_1.default.Router();
+// 获取任务状态（统一使用 GET + JSON 字符串）
 router.get("/task/:id", async (req, res) => {
     const id = req.params.id;
     try {
-        // 读取整个任务哈希
-        const task = await redis_1.default.hgetall(`task:${id}`);
-        if (!task || Object.keys(task).length === 0) {
+        const raw = await redis_1.default.get(`task:${id}`);
+        if (!raw) {
             return res.status(404).json({
                 success: false,
                 message: "任务不存在"
             });
         }
-        // Redis 返回的都是字符串，需要处理 JSON 字段
-        if (task.result) {
-            try {
-                task.result = JSON.parse(task.result);
-            }
-            catch (parseError) {
-                console.error("❌ JSON.parse(result) 失败:", parseError);
-                console.error("原始 result 内容:", task.result);
-                // 保持原始字符串，让前端再尝试解析
-            }
+        let task;
+        try {
+            task = JSON.parse(raw);
+        }
+        catch {
+            task = raw;
         }
         res.json({
             success: true,

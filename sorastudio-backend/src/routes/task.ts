@@ -1,3 +1,11 @@
+// src/routes/task.ts
+
+import express, { Request, Response } from "express";
+import redis from "../services/redis";
+
+const router = express.Router();
+
+// 获取任务状态（统一使用 GET + JSON 字符串）
 router.get("/task/:id", async (req: Request, res: Response) => {
   const id = req.params.id;
 
@@ -30,3 +38,5 @@ router.get("/task/:id", async (req: Request, res: Response) => {
     });
   }
 });
+
+export default router;
