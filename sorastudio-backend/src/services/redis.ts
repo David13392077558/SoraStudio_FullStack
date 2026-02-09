@@ -3,19 +3,26 @@ import Redis from "ioredis";
 
 const redisUrl = process.env.REDIS_URL!;
 
-// ⭐ ioredis 会根据 rediss:// 自动启用 TLS
 const redis = new Redis(redisUrl, {
-  tls: redisUrl.startsWith("rediss://") ? {
-    rejectUnauthorized: false  // ⭐ Render Redis 需要关闭证书验证
-  } : undefined,
-  maxRetriesPerRequest: 3,
-  enableReadyCheck: true,
-  connectTimeout: 10000,
-  lazyConnect: false
+  tls: redisUrl.startsWith("rediss://")
+    ? { rejectUnauthorized: false }
+    : undefined,
+
+  // ⭐ Render 免费 Redis 必须使用单连接
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
+  lazyConnect: false,
+
+  // ⭐ 限制为单连接（关键）
+  maxConnections: 1,
+
+  // ⭐ 避免频繁断线
+  retryStrategy: () => 2000,
+  reconnectOnError: () => true
 });
 
 redis.on("connect", () => {
-  console.log("✅ Redis connected");
+  console.log("✅ Redis connected (single connection mode)");
 });
 
 redis.on("error", (err) => {
