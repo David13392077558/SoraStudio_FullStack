@@ -23,35 +23,28 @@ export const analyzeVideoHandler = async (req: Request, res: Response) => {
 
     // Worker 能识别的任务对象
     const task = {
-      task_id: taskId,
+      id: taskId,
       type: "video_analysis",
-      video_path: tempPath,
-      originalname: videoFile.originalname,
-      size: videoFile.size,
+      videoUrl: tempPath,
       createdAt: Date.now(),
       status: "queued"
     };
 
-    // 写入 Redis（pending_task）
-    await redis.set(
-      `pending_task:${taskId}`,
-      JSON.stringify(task),
-      "EX",
-      3600
-    );
+    // 1. 写入 pending_task:{id}
+    await redis.hset(`pending_task:${taskId}`, task);
+
+    // 2. ⭐⭐ 推入队列（Worker 就能读到了）
+    await redis.lpush("tasks:queue", taskId);
 
     console.log(`任务已写入 Redis: pending_task:${taskId}`);
+    console.log(`任务已加入队列: tasks:queue -> ${taskId}`);
 
     res.json({
       taskId,
       message: "视频分析任务已提交",
-      status: "queued",
-      fileInfo: {
-        originalname: videoFile.originalname,
-        size: videoFile.size,
-        mimetype: videoFile.mimetype
-      }
+      status: "queued"
     });
+
   } catch (error) {
     console.error("视频分析失败:", error);
     res.status(500).json({ error: "服务器内部错误" });
