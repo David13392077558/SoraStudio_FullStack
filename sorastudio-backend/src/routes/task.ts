@@ -1,33 +1,21 @@
-// src/routes/task.ts
-
-import express, { Request, Response } from "express";
-import redis from "../services/redis";
-
-const router = express.Router();
-
 router.get("/task/:id", async (req: Request, res: Response) => {
   const id = req.params.id;
 
   try {
-    // 读取整个任务哈希
-    const task = await redis.hgetall(`task:${id}`);
+    const raw = await redis.get(`task:${id}`);
 
-    if (!task || Object.keys(task).length === 0) {
+    if (!raw) {
       return res.status(404).json({
         success: false,
         message: "任务不存在"
       });
     }
 
-    // Redis 返回的都是字符串，需要处理 JSON 字段
-    if (task.result) {
-      try {
-        task.result = JSON.parse(task.result);
-      } catch (parseError) {
-        console.error("❌ JSON.parse(result) 失败:", parseError);
-        console.error("原始 result 内容:", task.result);
-        // 保持原始字符串，让前端再尝试解析
-      }
+    let task: any;
+    try {
+      task = JSON.parse(raw);
+    } catch {
+      task = raw;
     }
 
     res.json({
@@ -42,5 +30,3 @@ router.get("/task/:id", async (req: Request, res: Response) => {
     });
   }
 });
-
-export default router;
