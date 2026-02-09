@@ -122,6 +122,19 @@ app.get("/health", (req: Request, res: Response) => {
 // 诊断接口
 app.get("/diagnostics", diagnosticHandler);
 
+// ⭐ 临时调试接口：删除某个 task key（用于清理旧的 hash 类型）
+app.get("/debug/delete-task/:id", async (req: Request, res: Response) => {
+  try {
+    const key = `task:${req.params.id}`;
+    await redis.del(key);
+    res.json({ deleted: key });
+  } catch (err) {
+    console.error("❌ 删除任务 key 失败:", err);
+    res.status(500).json({ error: "删除失败", detail: err });
+  }
+});
+
+
 // 全局错误处理
 app.use((error: any, req: Request, res: Response, next: NextFunction) => {
   console.error("❌ 未处理的错误:", error);
